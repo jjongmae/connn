@@ -1,14 +1,15 @@
 .App {
-  margin-left: 15%;
-  margin-right: 15%;
+  width: 1000px; /* 원하는 너비로 설정 */
+  margin: 0 auto; /* 가운데 정렬을 위해 좌우 마진을 auto로 설정 */
 }
 
 .App-header {
   margin-top: 30px;
+  display: flex;
+  justify-content: center; /* 수평 가운데 정렬 */
 }
 
 .Category-btn-group {
-  text-align: center;
 }
 
 .Category-btn {
@@ -20,4 +21,33 @@
   border: none;
   border-radius: 25px;
   margin: 5px;
+}
+
+.App-main{
+  margin-top: 10px;
+  display: flex;
+  justify-content: center; /* 수평 가운데 정렬 */
+}
+
+.Search {
+  width: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center; /* 수평 가운데 정렬 */
+}
+
+.Search-input {
+  width: 900px; /* 화면 너비의 100%로 설정하여 화면을 꽉 채움 */
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.Search-img {
+  position : absolute;
+  width: 17px;
+  top: 10px;
+  right: 50px;
+  margin: 0;
 }

@@ -14,6 +14,14 @@ function App() {
           <button className="Category-btn">기타</button>
         </div>
       </header>
+      <main className="App-main">
+        <div className="Search">
+          <input className="Search-input" type="text" placeholder="검색어 입력"/>
+          <img className="Search-img" src="https://s3.ap-northeast-2.amazonaws.com/cdn.wecode.co.kr/icon/search.png"/>
+        </div>
+      </main>
+      <footer>
+      </footer>
     </div>
   );
 }
