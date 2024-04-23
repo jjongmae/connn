@@ -16,7 +16,7 @@ const CHATLIST = [
     title: "골드4 듀오 구합니다. 저는 정글러 입니다. 1인분 가능하신분.", 
     totalCount: 3, 
     currentCount: 2, 
-    user: ["최박사", "김박사"], 
+    user: ["아이언맨", "울버린"], 
     date: "2024.04.03 17:00:00"
   },
   {
@@ -24,7 +24,7 @@ const CHATLIST = [
     title: "아이언3 듀오 구합니다. 즐겜 하실분", 
     totalCount: 2, 
     currentCount: 1, 
-    user: ["즐겜러"], 
+    user: ["존윅"], 
     date: "2024.04.03 17:10:00"
   },
   {
@@ -32,7 +32,7 @@ const CHATLIST = [
     title: "실버1 자랭 구합니다. 빡겜 하실분", 
     totalCount: 5, 
     currentCount: 2, 
-    user: ["빡겜러", "트롤러"], 
+    user: ["쉘던", "티모시샬라메"], 
     date: "2024.04.03 17:20:00"
   },
   {
@@ -86,6 +86,16 @@ class ChatList extends React.Component {
   }
 }
 
+class FloatingButton extends React.Component {
+  render(){
+    return (
+      <div class="floating-button">
+        <button>+</button>
+      </div>
+    )
+  }
+}
+
 function App() {
   return (
     <div class="app">
@@ -95,6 +105,7 @@ function App() {
         <Search></Search>
         <Category categories={CATEGORY}></Category>
         <ChatList chatList={CHATLIST}></ChatList>
+        <FloatingButton></FloatingButton>
       </main>
       <footer>
       </footer>
