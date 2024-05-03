@@ -1,5 +1,5 @@
 import './App.css';
-import React from 'react';
+import React , { useState } from 'react';
 
 const CATEGORY = [
   "리그 오브 레전드",
@@ -69,16 +69,36 @@ class Category extends React.Component {
 }
 
 class ChatList extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hoveredIndex: null,
+      showButtonIndex: null
+    };
+  }
+  handleMouseEnter = (index) => {
+    this.setState({ hoveredIndex: index, showButtonIndex: index});
+  }
+  handleMouseLeave = () => {
+    this.setState({ hoveredIndex: null, showButtonIndex: null});
+  }
   render(){
     const { chatList } = this.props;
+    const { hoveredIndex, showButtonIndex } = this.state;
     return (
       <div class="chat-list">
         {chatList.map((chat, index) => (
-          <div key={index} class="card">
+          <div key={index} class="card"
+            onMouseEnter={() => this.handleMouseEnter(index)}
+            onMouseLeave={this.handleMouseLeave}
+            style={{ backgroundColor: hoveredIndex === index? 'lightblue' : 'white'}}>
             <div class="title">{chat.title}</div>
             <div class="count">{`${chat.currentCount}/${chat.totalCount}`}</div>
             <div class="user">{chat.user.join(", ")}</div>
             <div class="date">{chat.date}</div>
+            {showButtonIndex === index && (
+              <button class="enter-btn">입장</button>
+            )}
           </div>
         ))}
       </div>
