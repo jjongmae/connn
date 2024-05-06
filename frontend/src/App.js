@@ -1,5 +1,6 @@
 import './App.css';
 import React , { useState } from 'react';
+import { BrowserRouter , Routes, Route, useNavigate } from 'react-router-dom';
 
 const CATEGORY = [
   "리그 오브 레전드",
@@ -43,7 +44,12 @@ const CHATLIST = [
     user: ["백색의간달프"], 
     date: "2024.04.03 17:21:00"
   }
-]
+];
+
+const USERS = [
+  "쉘던", 
+  "티모시샬라메"
+];
 
 const Search = () => {
   return (
@@ -66,6 +72,8 @@ const Category = ({ categories }) => {
 const ChatList = ({ chatList }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [showButtonIndex, setShowButtonIndex] = useState(null);
+  const navigate = useNavigate();
+
   const handleMouseEnter = (index) => {
     setHoveredIndex(index);
     setShowButtonIndex(index);
@@ -86,7 +94,7 @@ const ChatList = ({ chatList }) => {
           <div class="user">{chat.user.join(", ")}</div>
           <div class="date">{chat.date}</div>
           {showButtonIndex === index && (
-            <button class="enter-btn">입장</button>
+            <button onClick={() => navigate("/chatroom")} class="enter-btn">입장</button>
           )}
         </div>
       ))}
@@ -109,6 +117,8 @@ const CreateChatRoom = ({ setIsModalOpen, categories }) => {
     totalCount: ''
   });
 
+  const navigate = useNavigate();
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setRoomInfo({
@@ -122,6 +132,8 @@ const CreateChatRoom = ({ setIsModalOpen, categories }) => {
     console.log('Room Info:', roomInfo);
     // 팝업 닫기
     setIsModalOpen(false);
+
+    navigate("/chatroom");
   };
 
   return (
@@ -169,13 +181,83 @@ const MainPage = () => {
   )
 }
 
+const ChatRoom = () => {  
+  const users = USERS;
+
+  // 채팅 메시지 목록
+  const [messages, setMessages] = useState([]);
+
+  // 입력한 채팅 메시지
+  const [newMessage, setNewMessage] = useState('');
+
+  const navigate = useNavigate();
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() !== '') {
+      setMessages([...messages, { user: 'Me', text: newMessage }]);
+      setNewMessage('');
+    }
+  };
+
+  const handleLeaveRoom = () => {
+    // 채팅방 나가기 로직
+    navigate("/");
+  };
+
+  return (
+    <div className="chat-room">
+      <div className="user-list">
+        <h2>참여자</h2>
+        <ul>
+          {users.map((user, index) => (
+            <div>
+              <li key={index}>{user}</li>
+              <button>소리</button>
+              <button>마이크</button>
+              <button>채팅</button>
+              <button>강제퇴장</button>
+            </div>
+          ))}
+        </ul>
+      </div>
+      <div className="chat-area">
+        <h2>채팅 내용</h2>
+        <div className="messages">
+          {messages.map((message, index) => (
+            <div key={index} className="message">
+              <strong>{message.user}:</strong> {message.text}
+            </div>
+          ))}
+        </div>
+        <div className="input-area">
+          <input
+            type="text"
+            placeholder="메시지를 입력하세요..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+          />
+          <button onClick={handleSendMessage}>전송</button>
+        </div>
+      </div>
+      <div className="leave-button">
+        <button onClick={handleLeaveRoom}>채팅방 나가기</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <div class="app">
       <header class="app-header">
       </header>
       <main class="app-main">
-        <MainPage></MainPage>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<MainPage></MainPage>} />
+            <Route path="/chatroom" element={<ChatRoom></ChatRoom>} />
+          </Routes>
+        </BrowserRouter>
       </main>
       <footer>
       </footer>
