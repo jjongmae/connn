@@ -108,23 +108,41 @@
 }
 
 .modal-content {
+  text-align: center;
   background-color: #fefefe;
   padding: 20px;
   border: 1px solid #888;
-  width: 80%;
-  max-width: 500px; /* 모달 최대 너비 */
+  width: 400px;
 }
 
-.close {
+ .close {
   color: #aaa;
   float: right;
   font-size: 28px;
   font-weight: bold;
 }
 
-.close:hover,
-.close:focus {
+ .close:hover,
+ .close:focus {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 10px; /* 각 그룹 사이의 간격을 조절합니다. */
+  display: flex;
+}
+
+.form-group label {
+  display: inline-block;
+  width: 100px; /* 라벨의 너비를 설정합니다. */
+  text-align: right; /* 라벨을 오른쪽 정렬합니다. */
+  margin-right: 10px; /* 라벨과 컨트롤 사이의 간격을 조절합니다. */
+}
+
+.form-group select,
+.form-group input {
+  width: 200px; /* 컨트롤의 너비를 설정합니다. (라벨의 너비 + 여백) */
+  /* 필요한 스타일링을 추가합니다. */
 }
