@@ -27,21 +27,26 @@ const ChatRoom = () => {
   
     return (
       <div className="chat-room">
-        <div className="user-list">
-          <h2>참여자</h2>
-          <ul>
-            {users.map((user, index) => (
-              <div>
-                <li key={index}>{user}</li>
-                <button>소리</button>
-                <button>마이크</button>
-                <button>채팅</button>
-                <button>강제퇴장</button>
-              </div>
-            ))}
-          </ul>
+        <div className="left">
+          <div className="user-list">
+            <h2>참여자</h2>
+            <ul>
+              {users.map((user, index) => (
+                <div>
+                  <li key={index}>{user}</li>
+                  <button>소리</button>
+                  <button>마이크</button>
+                  <button>채팅</button>
+                  <button>강제퇴장</button>
+                </div>
+              ))}
+            </ul>
+          </div>
+          <div className="leave-button">
+            <button onClick={handleLeaveRoom}>채팅방 나가기</button>
+          </div>
         </div>
-        <div className="chat-area">
+        <div className="right">
           <h2>채팅 내용</h2>
           <div className="messages">
             {messages.map((message, index) => (
@@ -59,9 +64,6 @@ const ChatRoom = () => {
             />
             <button onClick={handleSendMessage}>전송</button>
           </div>
-        </div>
-        <div className="leave-button">
-          <button onClick={handleLeaveRoom}>채팅방 나가기</button>
         </div>
       </div>
     );
