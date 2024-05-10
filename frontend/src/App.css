@@ -150,11 +150,11 @@
 
 .chat-room {
   display: flex;
-  height: 800px;
+  height: 80vh;
   background-color:aliceblue;
 }
 
-.chat-room .left {  
+.chat-room .left {
   position: relative;
   margin-left: 2%;
   border-right: 1px solid black; /* 우측에 실선 표시 */

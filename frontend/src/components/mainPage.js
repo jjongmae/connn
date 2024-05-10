@@ -1,4 +1,4 @@
-import React , { useState } from 'react';
+import React , { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CATEGORY from '../mock/category.json';
 import CHATLIST from '../mock/chatList.json';
@@ -34,6 +34,9 @@ const Search = () => {
       setHoveredIndex(null);
       setShowButtonIndex(null);
     };
+    const handleOnClickEnterButton = (index) => {
+      navigate("/chatroom");
+    }
     return (
       <div class="chat-list">
         {chatList.map((chat, index) => (
@@ -45,7 +48,7 @@ const Search = () => {
             <div class="user">{chat.user.join(", ")}</div>
             <div class="date">{chat.date}</div>
             {showButtonIndex === index && (
-              <button onClick={() => navigate("/chatroom")} class="enter-btn">입장</button>
+              <button onClick={() => handleOnClickEnterButton(index)} class="enter-btn">입장</button>
             )}
           </div>
         ))}
@@ -122,13 +125,44 @@ const Search = () => {
   
   const MainPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [chatList, setChatList] = useState([]);
+
+    const requestCategories = async () => {
+      try {
+        //const response = await fetch('API URL');
+        //const data = await response.json();
+        const data = CATEGORY;
+        setCategories(data);
+      } catch (error) {
+        console.error(`카테고리를 불러오는데 실패했습니다.\ncode: ${error}`);
+      }
+    };
+
+    const requestChatList = async () => {
+      try {
+        //const response = await fetch('API URL');
+        //const data = await response.json();
+        const data = CHATLIST;
+        setChatList(data);
+      } catch (error) {
+        console.error(`채팅방 목록을 불러오는데 실패했습니다.\ncode: ${error}`);
+      }
+    };
+
+    //API 호출을 위한 useEffect
+    useEffect(() => {
+      requestCategories();
+      requestChatList();
+    }, []);
+    
     return (
       <div>
         <Search></Search>
-        <Category categories={CATEGORY}></Category>
-        <ChatList chatList={CHATLIST}></ChatList>
+        <Category categories={categories}></Category>
+        <ChatList chatList={chatList}></ChatList>
         <FloatingButton setIsModalOpen={setIsModalOpen}></FloatingButton>
-        {isModalOpen && <CreateChatRoom setIsModalOpen={setIsModalOpen} categories={CATEGORY} />}
+        {isModalOpen && <CreateChatRoom setIsModalOpen={setIsModalOpen} categories={categories} />}
       </div>
     )
   }

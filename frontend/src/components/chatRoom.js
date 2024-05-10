@@ -1,9 +1,10 @@
-import React , { useState } from 'react';
+import React , { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import USERS from '../mock/users.json'
 
-const ChatRoom = () => {  
-    const users = USERS;
+const ChatRoom = () => {
+    //사용자 목록
+    const [userList, setUserList] = useState([]);
   
     // 채팅 메시지 목록
     const [messages, setMessages] = useState([]);
@@ -24,6 +25,22 @@ const ChatRoom = () => {
       // 채팅방 나가기 클릭 시 MainPage로 이동
       navigate("/");
     };
+
+    const requestUserList = async () => {
+      try {
+        //const response = await fetch('API URL');
+        //const data = await response.json();
+        const data = USERS;
+        setUserList(data);
+      } catch (error) {
+        console.error(`유저 목록을 불러오는데 실패했습니다.\ncode: ${error}`);
+      }
+    };
+
+    //API 호출을 위한 useEffect
+    useEffect(() => {
+      requestUserList();
+    }, []);
   
     return (
       <div className="chat-room">
@@ -31,7 +48,7 @@ const ChatRoom = () => {
           <div className="user-list">
             <h2>참여자</h2>
             <ul>
-              {users.map((user, index) => (
+              {userList.map((user, index) => (
                 <div>
                   <li key={index}>{user}</li>
                   <button>소리</button>
