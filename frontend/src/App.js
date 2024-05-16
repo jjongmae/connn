@@ -1,19 +1,19 @@
 import './App.css';
 import React from 'react';
-import { BrowserRouter , Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainPage from './components/mainPage';
 import ChatRoom from './components/chatRoom';
 
 function App() {
   return (
-    <div class="app">
-      <header class="app-header">
+    <div className="app">
+      <header className="app-header">
       </header>
-      <main class="app-main">
+      <main className="app-main">
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<MainPage></MainPage>} />
-            <Route path="/chatroom" element={<ChatRoom></ChatRoom>} />
+            <Route path="/" element={<MainPage />} />
+            <Route path="/chatroom" element={<ChatRoom />} />
           </Routes>
         </BrowserRouter>
       </main>

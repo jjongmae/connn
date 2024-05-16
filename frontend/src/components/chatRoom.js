@@ -2,6 +2,15 @@ import React , { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import USERS from '../mock/users.json'
 
+const fetchUserList = async () => {
+  try {
+    const data = USERS;
+    return data;
+  } catch (error) {
+    throw new Error(`유저 목록을 불러오는데 실패했습니다: ${error}`);
+  }
+};
+
 const ChatRoom = () => {
     //사용자 목록
     const [userList, setUserList] = useState([]);
@@ -26,20 +35,14 @@ const ChatRoom = () => {
       navigate("/");
     };
 
-    const requestUserList = async () => {
-      try {
-        //const response = await fetch('API URL');
-        //const data = await response.json();
-        const data = USERS;
-        setUserList(data);
-      } catch (error) {
-        console.error(`유저 목록을 불러오는데 실패했습니다.\ncode: ${error}`);
-      }
-    };
-
     //API 호출을 위한 useEffect
     useEffect(() => {
-      requestUserList();
+      const init = async () => {
+        const data = await fetchUserList();
+        setUserList(data);
+      };
+
+      init();
     }, []);
   
     return (
@@ -48,9 +51,9 @@ const ChatRoom = () => {
           <div className="user-list">
             <h2>참여자</h2>
             <ul>
-              {userList.map((user, index) => (
-                <div>
-                  <li key={index}>{user}</li>
+              {userList.map((user) => (
+                <div key={user.userIdx}>
+                  <li>{user.userName}</li>
                   <button>소리</button>
                   <button>마이크</button>
                   <button>채팅</button>
@@ -86,4 +89,4 @@ const ChatRoom = () => {
     );
   }
 
-  export default ChatRoom
+  export default ChatRoom;

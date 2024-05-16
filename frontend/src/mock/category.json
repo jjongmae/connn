@@ -1,9 +1,30 @@
 [
-    "ALL",
-    "리그 오브 레전드",
-    "배틀 그라운드",
-    "메이플 스토리",
-    "주식/코인",
-    "고민상담",
-    "기타"
+    {
+        "categoryId": 0,
+        "categoryName": "ALL"
+    },
+    {
+        "categoryId": 1,
+        "categoryName": "리그 오브 레전드"
+    },
+    {
+        "categoryId": 2,
+        "categoryName": "배틀 그라운드"
+    },
+    {
+        "categoryId": 3,
+        "categoryName": "메이플 스토리"
+    },
+    {
+        "categoryId": 4,
+        "categoryName": "주식/코인"
+    },
+    {
+        "categoryId": 5,
+        "categoryName": "고민상담"
+    },
+    {
+        "categoryId": 6,
+        "categoryName": "기타"
+    }
 ]

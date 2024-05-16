@@ -47,6 +47,11 @@
   margin: 5px;
 }
 
+.category .btn.selected {
+  color: white;
+  background-color: blue;
+}
+
 .chat-list{
   margin-top: 30px;
   display:flex;
@@ -73,6 +78,11 @@
 }
 
 .chat-list .card .date{
+  font-size:12px;
+  color:#b4b4b6;
+}
+
+.chat-list .card .card-category{
   font-size:12px;
   color:#b4b4b6;
 }
