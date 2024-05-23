@@ -34,12 +34,26 @@ CREATE TABLE IF NOT EXISTS `categories` (
 -- 테이블 connn.chat_rooms 구조 내보내기
 CREATE TABLE IF NOT EXISTS `chat_rooms` (
   `room_id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `total_members` int(11) NOT NULL,
-  `category_id` int(11) NOT NULL,
-  `created_at` datetime DEFAULT current_timestamp(),
-  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp(),
+  `status` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`room_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 내보낼 데이터가 선택되어 있지 않습니다.
+
+-- 테이블 connn.users 구조 내보내기
+CREATE TABLE IF NOT EXISTS `users` (
+  `user_id` int(11) NOT NULL AUTO_INCREMENT,
+  `room_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `status` varchar(50) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`user_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 내보낼 데이터가 선택되어 있지 않습니다.
