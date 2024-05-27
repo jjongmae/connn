@@ -4,11 +4,18 @@ import CATEGORY from '../mock/category.json';
 import CHATLIST from '../mock/chatList.json';
 
 const fetchCategories = async () => {
+  const host = process.env.REACT_APP_API_HOST;
+  const port = process.env.REACT_APP_API_PORT;
+  const url = `${host}:${port}/categories/`;
+
   try {
-    //const response = await fetch('API URL');
-    //const data = await response.json();
-    //// 실제 API 호출 대신 모의 데이터 반환
-    const data = CATEGORY;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
     return data;
   } catch (error) {
     throw new Error(`카테고리를 불러오는데 실패했습니다: ${error}`);
