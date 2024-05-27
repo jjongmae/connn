@@ -3,11 +3,24 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
+var bodyParser = require('body-parser');
+var cors = require('cors');
+var humps = require('humps');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var categoriesRouter = require('./routes/categoriesRouter');
 
 var app = express();
+
+// JSON 응답을 카멜 케이스로 변환하는 미들웨어
+function camelCaseMiddleware(req, res, next) {
+  const originalJson = res.json;
+  res.json = function(data) {
+      data = humps.camelizeKeys(data);
+      originalJson.call(this, data);
+  };
+  next();
+}
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -18,9 +31,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(bodyParser.json());
+app.use(cors());
+app.use(camelCaseMiddleware);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/categories', categoriesRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

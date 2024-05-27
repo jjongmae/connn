@@ -7,19 +7,29 @@
 var app = require('../src/app');
 var debug = require('debug')('backend:server');
 var http = require('http');
+var https = require('https'); // HTTPS module added
+var fs = require('fs'); // File system module added
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3005');
+var port = normalizePort(process.env.PORT || '3100');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * SSL certificate settings
+ */
+var sslOptions = {
+  key: fs.readFileSync('./ssl/private.key'), // Path to your private key file
+  cert: fs.readFileSync('./ssl/certificate.crt') // Path to your certificate file
+};
+
+/**
+ * Create HTTPS server.
  */
 
-var server = http.createServer(app);
+var server = https.createServer(sslOptions, app); // HTTPS server created
 
 /**
  * Listen on provided port, on all network interfaces.
