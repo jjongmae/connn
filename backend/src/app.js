@@ -7,8 +7,9 @@ var bodyParser = require('body-parser');
 var cors = require('cors');
 var humps = require('humps');
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 var categoriesRouter = require('./routes/categoriesRouter');
+var chatRoomsRouter = require('./routes/chatRoomsRouter')
+var usersRouter = require('./routes/usersRouter');
 
 var app = express();
 
@@ -35,8 +36,9 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(camelCaseMiddleware);
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/categories', categoriesRouter);
+app.use('/chatRooms', chatRoomsRouter);
+app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

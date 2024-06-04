@@ -1,10 +1,20 @@
 import React , { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import USERS from '../mock/users.json'
 
-const fetchUserList = async () => {
+const fetchUserList = async (roomId) => {
+  const host = process.env.REACT_APP_API_HOST;
+  const port = process.env.REACT_APP_API_PORT;
+  const url = `${host}:${port}/users/room/${roomId}`;
+
   try {
-    const data = USERS;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
     return data;
   } catch (error) {
     throw new Error(`유저 목록을 불러오는데 실패했습니다: ${error}`);
@@ -22,6 +32,8 @@ const ChatRoom = () => {
     const [newMessage, setNewMessage] = useState('');
   
     const navigate = useNavigate();
+    const location = useLocation();
+    const { roomId } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
   
     const handleSendMessage = () => {
       if (newMessage.trim() !== '') {
@@ -38,7 +50,7 @@ const ChatRoom = () => {
     //API 호출을 위한 useEffect
     useEffect(() => {
       const init = async () => {
-        const data = await fetchUserList();
+        const data = await fetchUserList(roomId);
         setUserList(data);
       };
 
@@ -52,8 +64,8 @@ const ChatRoom = () => {
             <h2>참여자</h2>
             <ul>
               {userList.map((user) => (
-                <div key={user.userIdx}>
-                  <li>{user.userName}</li>
+                <div key={user.userId}>
+                  <li>{user.name}</li>
                   <button>소리</button>
                   <button>마이크</button>
                   <button>채팅</button>
