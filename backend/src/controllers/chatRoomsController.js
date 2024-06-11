@@ -26,12 +26,25 @@ exports.getAllChatRooms = async (req, res) => {
 };
 
 exports.createChatRoom = async (req, res) => {
-    const { categoryId, title, totalMembers, status } = req.body;
+    const { categoryId, title, totalMembers, name } = req.body;
+    const connection = await db.getConnection();
     try {
-        const [result, ] = await db.query('INSERT INTO chat_rooms (category_id, title, total_members, status) VALUES (?, ?, ?, ?)', [categoryId, title, totalMembers, status]);
-        res.status(201).json({ message: 'Chat room created', room_id: result.insertId });
+        await connection.beginTransaction(); // 트랜잭션 시작
+
+        // 채팅방 생성
+        const [roomResult] = await connection.query('INSERT INTO chat_rooms (category_id, title, total_members) VALUES (?, ?, ?)', [categoryId, title, totalMembers]);
+        const roomId = roomResult.insertId;
+
+        // 사용자 생성
+        const [userResult] = await connection.query('INSERT INTO users (name, room_id) VALUES (?, ?)', [name, roomId]);
+
+        await connection.commit(); // 모든 쿼리 성공 시 커밋
+        res.status(201).json({ message: 'Chat room and user created', room_id: roomId, user_id: userResult.insertId });
     } catch (err) {
+        await connection.rollback(); // 에러 발생 시 롤백
         res.status(500).json({ message: err.message });
+    } finally {
+        connection.release(); // 커넥션 반환
     }
 };
 

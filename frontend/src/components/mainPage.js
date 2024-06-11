@@ -181,10 +181,10 @@ const Search = () => {
   const CreateChatRoom = ({ setIsModalOpen }) => {
     const [categories, setCategories] = useState([]);
     const [roomInfo, setRoomInfo] = useState({
-      category: '',
+      categoryId: '',
       title: '',
-      totalCount: '',
-      nickName: ''
+      totalMembers: '',
+      name: ''
     });
     const navigate = useNavigate();
   
@@ -224,9 +224,9 @@ const Search = () => {
           <form className="create-chat-room" onSubmit={handleSubmit}>
             <div className="form-group">
                 <label>카테고리</label>
-                <select name="category" value={roomInfo.category} onChange={handleInputChange}>
+                <select name="categoryId" value={roomInfo.categoryId} onChange={handleInputChange}>
                     {categories.map((category) => (
-                        <option key={category.categoryId} value={category}>{category.categoryName}</option>
+                        <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
                     ))}
                 </select>
             </div>
@@ -236,11 +236,11 @@ const Search = () => {
             </div>
             <div className="form-group">
                 <label>인원수</label>
-                <input type="text" name="totalCount" value={roomInfo.totalCount} onChange={handleInputChange} />
+                <input type="text" name="totalMembers" value={roomInfo.totalMembers} onChange={handleInputChange} />
             </div>
             <div className="form-group">
                 <label>닉네임</label>
-                <input type="text" name="nickName" value={roomInfo.nickName} onChange={handleInputChange} />
+                <input type="text" name="name" value={roomInfo.name} onChange={handleInputChange} />
             </div>
             <button type="submit">만들기</button>
           </form>
