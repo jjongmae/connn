@@ -196,12 +196,13 @@ const Search = () => {
       });
     };
   
-    const handleSubmit = async () => {
+    const handleSubmit = async (event) => {
+      event.preventDefault();  // 폼의 기본 제출 동작을 방지
       try {
         const createdRoom = await fetchCreateChatRoom(roomInfo);
         console.log('Room Info:', roomInfo);
         setIsModalOpen(false);
-        navigate("/chatroom", { state: { roomId: createdRoom.roomId } });
+        navigate("/chatroom", { state: { roomId: createdRoom.roomId, userId: createdRoom.userId } });
       } catch (error) {
         console.error('채팅방 생성 중 오류 발생:', error);
       }
@@ -284,3 +285,4 @@ const Search = () => {
   }
   
   export default MainPage;
+

@@ -33,7 +33,7 @@ const ChatRoom = () => {
   
     const navigate = useNavigate();
     const location = useLocation();
-    const { roomId } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
+    const { roomId, userId } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
   
     const handleSendMessage = () => {
       if (newMessage.trim() !== '') {
