@@ -21,6 +21,29 @@ const fetchUserList = async (roomId) => {
   }
 };
 
+const deleteUserList = async (userId) => {
+  const host = process.env.REACT_APP_API_HOST;
+  const port = process.env.REACT_APP_API_PORT;
+  const url = `${host}:${port}/users/${userId}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
+    if (response.ok) {
+      console.log(data.message); // 성공 메시지 로그
+    } else {
+      console.error(data.message); // 실패 메시지 로그
+    }
+  } catch (error) {
+    console.error(`사용자 삭제 실패: ${error}`);
+  }
+};
+
 const ChatRoom = () => {
     //사용자 목록
     const [userList, setUserList] = useState([]);
@@ -42,8 +65,10 @@ const ChatRoom = () => {
       }
     };
   
-    const handleLeaveRoom = () => {
-      // 채팅방 나가기 클릭 시 MainPage로 이동
+    const handleLeaveRoom = async () => {
+      // 사용자 목록 삭제 요청
+      await deleteUserList(userId); // userId는 현재 사용자의 ID
+      // 요청 성공 후 메인 페이지로 이동
       navigate("/");
     };
 
@@ -52,7 +77,7 @@ const ChatRoom = () => {
       const init = async () => {
         const data = await fetchUserList(roomId);
         setUserList(data);
-      };
+      };ㅔ
 
       init();
     }, []);

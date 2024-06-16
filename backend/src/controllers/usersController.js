@@ -24,9 +24,9 @@ exports.getUser = async (req, res) => {
 };
 
 exports.createUser = async (req, res) => {
-    const { roomId, name, status } = req.body;
+    const { roomId, name } = req.body;
     try {
-        const [result, ] = await db.query('INSERT INTO users (room_id, name, status) VALUES (?, ?, ?)', [roomId, name, status]);
+        const [result, ] = await db.query(`INSERT INTO users (room_id, name, status) VALUES (?, ?, 'active')`, [roomId, name]);
         res.status(201).json({ message: 'User created', userId: result.insertId });
     } catch (err) {
         res.status(500).json({ message: err.message });
