@@ -140,3 +140,36 @@ exports.getChatRoomsByCategory = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+exports.leaveChatRoom = async (req, res) => {
+    const { roomId, userId } = req.body; // req.params에서 req.body로 변경
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction(); // 트랜잭션 시작
+
+        // 사용자 삭제
+        const [deleteUser] = await connection.query(`DELETE FROM users WHERE user_id = ? AND room_id = ?`, [userId, roomId]);
+        if (deleteUser.affectedRows === 0) {
+            throw new Error('User not found or already removed');
+        }
+
+        // 해당 채팅방에 남은 사용자 수 확인
+        const [usersRemaining] = await connection.query(`SELECT COUNT(*) AS count FROM users WHERE room_id = ?`, [roomId]);
+        if (usersRemaining[0].count === 0) {
+            // 사용자가 없으면 채팅방 삭제
+            const [deleteRoom] = await connection.query(`DELETE FROM chat_rooms WHERE room_id = ?`, [roomId]);
+            if (deleteRoom.affectedRows === 0) {
+                throw new Error('Chat room not found or already removed');
+            }
+        }
+
+        await connection.commit(); // 모든 쿼리 성공 시 커밋
+        res.json({ message: 'User and possibly chat room removed' });
+    } catch (err) {
+        await connection.rollback(); // 에러 발생 시 롤백
+        res.status(500).json({ message: err.message });
+    } finally {
+        connection.release(); // 커넥션 반환
+    }
+};
+

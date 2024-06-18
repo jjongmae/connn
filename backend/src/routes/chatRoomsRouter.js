@@ -8,5 +8,6 @@ router.get('/:id', chatRoomController.getChatRoom);
 router.put('/:id', chatRoomController.updateChatRoom);
 router.delete('/:id', chatRoomController.deleteChatRoom);
 router.get('/category/:categoryId', chatRoomController.getChatRoomsByCategory);
+router.post('/leave', chatRoomController.leaveChatRoom);
 
 module.exports = router;

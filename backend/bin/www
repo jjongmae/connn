@@ -9,6 +9,7 @@ var debug = require('debug')('backend:server');
 var http = require('http');
 var https = require('https'); // HTTPS module added
 var fs = require('fs'); // File system module added
+var setupSocket = require('../src/socket');
 
 /**
  * Get port from environment and store in Express.
@@ -30,6 +31,8 @@ var sslOptions = {
  */
 
 var server = https.createServer(sslOptions, app); // HTTPS server created
+
+setupSocket(server);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -98,3 +101,4 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
+

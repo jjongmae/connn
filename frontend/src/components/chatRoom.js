@@ -1,6 +1,10 @@
 import React , { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import USERS from '../mock/users.json'
+import io from 'socket.io-client';
+
+let socket;
+let peerConnections = {};
 
 const fetchUserList = async (roomId) => {
   const host = process.env.REACT_APP_API_HOST;
@@ -21,17 +25,18 @@ const fetchUserList = async (roomId) => {
   }
 };
 
-const deleteUserList = async (userId) => {
+const leaveChatRoom = async (userId, roomId) => {
   const host = process.env.REACT_APP_API_HOST;
   const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/users/${userId}`;
+  const url = `${host}:${port}/chatRooms/leave`; // 엔드포인트 변경
 
   try {
     const response = await fetch(url, {
-      method: 'DELETE',
+      method: 'POST', // 메소드 변경
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({ userId, roomId }) // userId와 roomId를 JSON 형태로 전송
     });
     const data = await response.json();
     if (response.ok) {
@@ -40,7 +45,7 @@ const deleteUserList = async (userId) => {
       console.error(data.message); // 실패 메시지 로그
     }
   } catch (error) {
-    console.error(`사용자 삭제 실패: ${error}`);
+    console.error(`채팅방 나가기 실패: ${error}`);
   }
 };
 
@@ -57,31 +62,121 @@ const ChatRoom = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { roomId, userId } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
+
+    const setupPeerConnection = async (peerUserId) => {
+      const peerConnection = new RTCPeerConnection();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+  
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          socket.emit('candidate', { to: peerUserId, candidate: event.candidate, roomId: roomId });
+        }
+      };
+  
+      peerConnection.ontrack = event => {
+        // 여기서 받은 트랙을 재생할 수 있습니다.
+        const remoteAudio = document.getElementById('remoteAudio'); // HTML에서 오디오 태그의 ID
+        if (remoteAudio.srcObject !== event.streams[0]) {
+          remoteAudio.srcObject = event.streams[0]; // 수신된 스트림을 오디오 태그의 소스로 설정
+          console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
+        }
+      };
+  
+      peerConnections[peerUserId] = peerConnection;
+      return peerConnection;
+    };
+
+    const handleNewPeer = async (data) => {
+      const { peerUserId } = data;
+      const peerConnection = await setupPeerConnection(peerUserId);
+  
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('offer', { to: peerUserId, offer: offer, roomId: roomId });
+    };
   
     const handleSendMessage = () => {
-      if (newMessage.trim() !== '') {
-        setMessages([...messages, { user: 'Me', text: newMessage }]);
+      if (newMessage.trim() !== '') {     
         setNewMessage('');
       }
     };
   
-    const handleLeaveRoom = async () => {
-      // 사용자 목록 삭제 요청
-      await deleteUserList(userId); // userId는 현재 사용자의 ID
+    const handleLeaveRoom = async () => {      
       // 요청 성공 후 메인 페이지로 이동
       navigate("/");
     };
 
     //API 호출을 위한 useEffect
     useEffect(() => {
+      // 환경 변수에서 호스트와 포트 정보 가져오기
+      const host = process.env.REACT_APP_API_HOST;
+      const port = process.env.REACT_APP_API_PORT;
+      const serverUrl = `${host}:${port}`
+
+      // WebSocket 연결 초기화
+      socket = io(serverUrl, { secure: true });
+      socket.emit('joinRoom', { userId, roomId });
+
+      socket.on('userJoined', (data) => {
+        if (data.roomId === roomId) { // roomId 확인
+          console.log(`${data.userId}가 채팅방에 입장했습니다.`);
+          handleNewPeer(data);
+        }
+      });
+
+      socket.on('userLeft', (data) => {
+        if (data.roomId === roomId) { // roomId 확인
+          console.log(`${data.userId}가 채팅방에서 나갔습니다.`);
+          const peerUserId = data.userId;
+          if (peerConnections[peerUserId]) {
+            peerConnections[peerUserId].close(); // 해당 사용자와의 연결 종료
+            delete peerConnections[peerUserId]; // 연결 객체 삭제
+          }
+        }
+      });
+
+      socket.on('offer', async data => {
+        if (data.roomId === roomId) { // roomId 확인
+          const peerConnection = await setupPeerConnection(data.from);
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          socket.emit('answer', { to: data.from, answer: answer, roomId: roomId });
+        }
+      });
+  
+      socket.on('answer', data => {
+        if (data.roomId === roomId) { // roomId 확인
+          const peerConnection = peerConnections[data.from];
+          peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+      });
+  
+      socket.on('candidate', data => {
+        if (data.roomId === roomId) { // roomId 확인
+          const peerConnection = peerConnections[data.from];
+          peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      });
+
+      // 기존 유저 목록 가져오기 로직
       const init = async () => {
         const data = await fetchUserList(roomId);
         setUserList(data);
-      };ㅔ
-
+      };
       init();
-    }, []);
-  
+
+      // 컴포넌트 언마운트 시 실행될 로직
+      return async () => {
+        // 사용자 목록 삭제 요청
+        await leaveChatRoom(userId, roomId); // userId와 roomId를 전송
+        Object.values(peerConnections).forEach(pc => pc.close());
+        socket.emit('leaveRoom', { userId, roomId });
+        socket.disconnect();
+      };
+    }, [roomId, userId]); // roomId와 userId가 변경될 때만 실행
+
     return (
       <div className="chat-room">
         <div className="left">
@@ -118,10 +213,16 @@ const ChatRoom = () => {
               placeholder="메시지를 입력하세요..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSendMessage();
+                }
+              }}
             />
             <button onClick={handleSendMessage}>전송</button>
           </div>
         </div>
+        <audio id="remoteAudio" style={{ display: 'none' }}></audio>
       </div>
     );
   }

@@ -94,6 +94,11 @@ const fetchRegisterUser = async (roomId, name) => {
       },
       body: JSON.stringify({ roomId, name })
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP 상태 코드: ${response.status}`);
+    }
+
     const data = await response.json();
     return data.userId;
   } catch (error) {
@@ -157,6 +162,8 @@ const ChatList = ({ chatList= [] }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [showButtonIndex, setShowButtonIndex] = useState(null);
   const navigate = useNavigate();
+  const [isEnterModalOpen, setIsEnterModalOpen] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
 
   const handleMouseEnter = (roomId) => {
     setHoveredIndex(roomId);
@@ -166,20 +173,11 @@ const ChatList = ({ chatList= [] }) => {
     setHoveredIndex(null);
     setShowButtonIndex(null);
   };
-  const handleOnClickEnterButton = async (roomId) => {
-    const name = prompt("이름을 입력하세요:");
-    if (name) {
-      try {
-        const userId = await fetchRegisterUser(roomId, name);
-        navigate("/chatroom", { state: { roomId, userId } });
-      } catch (error) {
-        console.error('사용자 등록 실패:', error);
-        alert("사용자 등록에 실패했습니다.");
-      }
-    } else {
-      alert("이름 입력은 필수입니다.");
-    }
-  }
+  const handleOnClickEnterButton = (roomId) => {
+    setCurrentRoomId(roomId);
+    setIsEnterModalOpen(true);
+  };
+
   return (
     <div className="chat-list">
       {chatList.map((chat) => (
@@ -198,10 +196,49 @@ const ChatList = ({ chatList= [] }) => {
           )}
         </div>
       ))}
+      {isEnterModalOpen && <EnterChatModal isOpen={isEnterModalOpen} setIsOpen={setIsEnterModalOpen} roomId={currentRoomId} />}
     </div>
   );
 }
   
+const EnterChatModal = ({ isOpen, setIsOpen, roomId }) => {
+  const navigate = useNavigate();
+
+  const handleEnterChat = async (name) => {
+    if (name) {
+      try {
+        const userId = await fetchRegisterUser(roomId, name);
+        navigate("/chatroom", { state: { roomId, userId } });
+        setIsOpen(false); // 모달 닫기
+      } catch (error) {
+        console.error('사용자 등록 실패:', error);
+        alert("사용자 등록에 실패했습니다.\n중복된 이름은 사용할 수 없습니다.");
+      }
+    } else {
+      alert("이름 입력은 필수입니다.");
+    }
+  };
+
+  return (
+    <div className={`modal ${isOpen ? 'show' : ''}`}>
+      <div className="modal-content">
+        <span className="close" onClick={() => setIsOpen(false)}>&times;</span>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const name = e.target.elements.name.value;
+          handleEnterChat(name);
+        }}>
+          <div className="form-group">
+            <label>이름을 입력하세요:</label>
+            <input type="text" name="name" required />
+          </div>
+          <button type="submit">입장</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const FloatingButton = ({setIsModalOpen}) => {
   return (
     <div className="floating-button">
@@ -258,7 +295,7 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
           <div className="form-group">
               <label>카테고리</label>
               <select name="categoryId" value={roomInfo.categoryId} onChange={handleInputChange}>
-                  {categories.map((category) => (
+                  {categories.filter(category => category.categoryName !== 'ALL').map((category) => (
                       <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
                   ))}
               </select>
