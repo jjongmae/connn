@@ -86,7 +86,7 @@ const ChatRoom = () => {
         const remoteAudio = document.getElementById('remoteAudio'); // HTML에서 오디오 태그의 ID
         if (remoteAudio.srcObject !== event.streams[0]) {
           remoteAudio.srcObject = event.streams[0]; // 수신된 스트림을 오디오 태그의 소스로 설정
-          console.log('���디오 트랙이 추가되었습니다:', event.streams[0]);
+          console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
         }
       };
 
@@ -172,17 +172,30 @@ const ChatRoom = () => {
       });
 
       socket.on('offer', async data => {
-        if (data.roomId === roomId) {
-          if (peerConnections[data.from]) {
-            const peerConnection = peerConnections[data.from];
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('answer', { from: userId, to: data.from, answer: answer, roomId: roomId }); // 'from' 필드 추가
-          } else {
-            console.error('peerConnection 객체가 존재하지 않습니다:', data.from);
-            // 필요한 경우 여기에서 peerConnection 객체를 생성하거나 다른 복구 조치를 취할 수 있습니다.
-          }
+        if (data.roomId === roomId && data.to === userId) { // 새 사용자가 offer를 받음
+          const peerConnection = new RTCPeerConnection();
+          peerConnections[data.from] = peerConnection; // 새 사용자가 기존 사용자와의 연결 객체를 생성
+    
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+    
+          peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+              socket.emit('candidate', { from: userId, to: data.from, candidate: event.candidate, roomId: roomId });
+            }
+          };
+    
+          peerConnection.ontrack = event => {
+            const remoteAudio = document.getElementById('remoteAudio');
+            if (remoteAudio.srcObject !== event.streams[0]) {
+              remoteAudio.srcObject = event.streams[0];
+            }
+          };
+    
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          socket.emit('answer', { from: userId, to: data.from, answer: answer, roomId: roomId });
         }
       });
   
