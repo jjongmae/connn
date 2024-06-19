@@ -70,6 +70,8 @@ const ChatRoom = () => {
 
     const setupPeerConnection = async (peerUserId) => {
       const peerConnection = new RTCPeerConnection();
+      peerConnections[peerUserId] = peerConnection; // 여기로 이동
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
   
@@ -87,9 +89,6 @@ const ChatRoom = () => {
           console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
         }
       };
-
-      // 데이터 채널 설정 전에 peerConnections에 peerConnection을 할당
-      peerConnections[peerUserId] = peerConnection;
 
       // 데이터 채널 설정
       await setupDataChannel(peerConnection, peerUserId);

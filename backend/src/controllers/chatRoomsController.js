@@ -41,6 +41,7 @@ exports.createChatRoom = async (req, res) => {
         await connection.commit(); // 모든 쿼리 성공 시 커밋
         res.status(201).json({ message: 'Chat room and user created', room_id: roomId, user_id: userResult.insertId });
     } catch (err) {
+        console.error(err);
         await connection.rollback(); // 에러 발생 시 롤백
         res.status(500).json({ message: err.message });
     } finally {

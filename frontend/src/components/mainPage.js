@@ -282,6 +282,12 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
     const init = async () => {
       const data = await fetchCategories();
       setCategories(data);
+      if (data.length > 0) {
+        setRoomInfo(prev => ({
+          ...prev,
+          categoryId: data[1].categoryId // 첫 번째 카테고리의 ID로 초기화
+        }));
+      }
     };
 
     init();
