@@ -13,13 +13,13 @@ module.exports = (server) => {
         socket.on('joinRoom', ({ userId, roomId, name }) => {
             console.log(`${userId} has joined room ${roomId}/${userId}/${name}`);
             socket.join(roomId);
-            io.to(roomId).emit('userJoined', { userId, name }); // 모든 클라이언트에게 전송
+            io.to(roomId).emit('userJoined', { userId, roomId, name }); // 모든 클라이언트에게 전송
         });
 
         socket.on('leaveRoom', ({ userId, roomId }) => {
             console.log(`${userId} has left room ${roomId}/${userId}`);
             socket.leave(roomId);
-            io.to(roomId).emit('userLeft', { userId }); // 모든 클라이언트에게 전송
+            io.to(roomId).emit('userLeft', { userId, roomId }); // 모든 클라이언트에게 전송
         });
 
         // 클라이언트로부터 offer를 받았을 때

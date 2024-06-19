@@ -149,7 +149,7 @@ const ChatRoom = () => {
       socket.emit('joinRoom', { userId, roomId, name: name }); // 사용자의 이름을 서버로 전송
 
       socket.on('userJoined', (data) => {
-        if (data.roomId === roomId) { // roomId 확인
+        if (data.roomId === roomId && data.userId !== userId) { // roomId 확인 및 자기 자신 제외
           console.log(`${data.userId}가 채팅방에 입장했습니다.`);
           handleNewPeer(data);
 
