@@ -88,10 +88,12 @@ const ChatRoom = () => {
         }
       };
 
+      // 데이터 채널 설정 전에 peerConnections에 peerConnection을 할당
+      peerConnections[peerUserId] = peerConnection;
+
       // 데이터 채널 설정
       await setupDataChannel(peerConnection, peerUserId);
   
-      peerConnections[peerUserId] = peerConnection;
       return peerConnection;
     };
 
