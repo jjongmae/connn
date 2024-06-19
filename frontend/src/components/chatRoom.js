@@ -86,7 +86,7 @@ const ChatRoom = () => {
         const remoteAudio = document.getElementById('remoteAudio'); // HTML에서 오디오 태그의 ID
         if (remoteAudio.srcObject !== event.streams[0]) {
           remoteAudio.srcObject = event.streams[0]; // 수신된 스트림을 오디오 태그의 소스로 설정
-          console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
+          console.log('���디오 트랙이 추가되었습니다:', event.streams[0]);
         }
       };
 
@@ -113,12 +113,13 @@ const ChatRoom = () => {
     };
 
     const handleNewPeer = async (data) => {
-      const { peerUserId } = data;
+      const {peerUserId} = data;
+      console.log(`peerUserId: ${peerUserId}`);
       const peerConnection = await setupPeerConnection(peerUserId);
   
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-      socket.emit('offer', { to: peerUserId, offer: offer, roomId: roomId });
+      socket.emit('offer', { from: userId, to: peerUserId, offer: offer, roomId: roomId }); // 수정된 부분
     };
   
     const handleSendMessage = () => {
@@ -147,20 +148,18 @@ const ChatRoom = () => {
 
       // WebSocket 연결 초기화
       socket = io(serverUrl, { secure: true });
-      socket.emit('joinRoom', { userId, roomId, name: name }); // 사용자의 이름을 서버로 전송
+      socket.emit('joinRoom', { from: userId, roomId: roomId, name: name }); // 'from' 필드 추가
 
       socket.on('userJoined', (data) => {
         if (data.roomId === roomId && data.userId !== userId) { // roomId 확인 및 자기 자신 제외
           console.log(`${data.userId}가 채팅방에 입장했습니다.`);
-          handleNewPeer(data);
-
-          // 새로운 유저 정보를 기존 목록에 추가
+          handleNewPeer({ peerUserId: data.userId }); // 수정된 부분
           setUserList(prevUserList => [...prevUserList, { userId: data.userId, name: data.name }]);
         }
       });
 
       socket.on('userLeft', (data) => {
-        if (data.roomId === roomId) { // roomId 확인
+        if (data.roomId === roomId ) { // roomId 확인
           console.log(`${data.userId}가 채팅방에서 나갔습니다.`);
           const peerUserId = data.userId;
           if (peerConnections[peerUserId]) {
@@ -173,12 +172,17 @@ const ChatRoom = () => {
       });
 
       socket.on('offer', async data => {
-        if (data.roomId === roomId) { // roomId 확인
-          const peerConnection = await setupPeerConnection(data.from);
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          socket.emit('answer', { to: data.from, answer: answer, roomId: roomId });
+        if (data.roomId === roomId) {
+          if (peerConnections[data.from]) {
+            const peerConnection = peerConnections[data.from];
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', { from: userId, to: data.from, answer: answer, roomId: roomId }); // 'from' 필드 추가
+          } else {
+            console.error('peerConnection 객체가 존재하지 않습니다:', data.from);
+            // 필요한 경우 여기에서 peerConnection 객체를 생성하거나 다른 복구 조치를 취할 수 있습니다.
+          }
         }
       });
   
