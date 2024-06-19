@@ -148,7 +148,7 @@ const ChatRoom = () => {
 
       // WebSocket 연결 초기화
       socket = io(serverUrl, { secure: true });
-      socket.emit('joinRoom', { from: userId, roomId: roomId, name: name }); // 'from' 필드 추가
+      socket.emit('joinRoom', { userId, roomId, name: name }); // 사용자의 이름을 서버로 전송
 
       socket.on('userJoined', (data) => {
         if (data.roomId === roomId && data.userId !== userId) { // roomId 확인 및 자기 자신 제외
