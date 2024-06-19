@@ -75,7 +75,7 @@ const ChatRoom = () => {
   
       peerConnection.onicecandidate = event => {
         if (event.candidate) {
-          socket.emit('candidate', { to: peerUserId, candidate: event.candidate, roomId: roomId });
+          socket.emit('candidate', { from: userId, to: peerUserId, candidate: event.candidate, roomId: roomId });
         }
       };
   
@@ -191,9 +191,11 @@ const ChatRoom = () => {
       });
   
       socket.on('candidate', data => {
-        if (data.roomId === roomId) { // roomId 확인
+        if (data.roomId === roomId && data.from && peerConnections[data.from]) {
           const peerConnection = peerConnections[data.from];
           peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } else {
+          console.error('candidate 정보가 올바르지 않습니다:', data);
         }
       });
 
