@@ -208,7 +208,7 @@ const EnterChatModal = ({ isOpen, setIsOpen, roomId }) => {
     if (name) {
       try {
         const userId = await fetchRegisterUser(roomId, name);
-        navigate("/chatroom", { state: { roomId, userId } });
+        navigate("/chatroom", { state: { roomId, userId, name} });
         setIsOpen(false); // 모달 닫기
       } catch (error) {
         console.error('사용자 등록 실패:', error);
@@ -271,7 +271,7 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
       const createdRoom = await fetchCreateChatRoom(roomInfo);
       console.log('Room Info:', roomInfo);
       setIsModalOpen(false);
-      navigate("/chatroom", { state: { roomId: createdRoom.roomId, userId: createdRoom.userId } });
+      navigate("/chatroom", { state: { roomId: createdRoom.roomId, userId: createdRoom.userId, name: roomInfo.name } });
     } catch (error) {
       console.error('채팅방 생성 중 오류 발생:', error);
     }

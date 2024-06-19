@@ -49,6 +49,11 @@ const leaveChatRoom = async (userId, roomId) => {
   }
 };
 
+const getUserNameById = (userList, userId) => {
+  const user = userList.find(user => user.userId === userId);
+  return user ? user.name : '알 수 없는 사용자';
+};
+
 const ChatRoom = () => {
     //사용자 목록
     const [userList, setUserList] = useState([]);
@@ -61,7 +66,7 @@ const ChatRoom = () => {
   
     const navigate = useNavigate();
     const location = useLocation();
-    const { roomId, userId } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
+    const { roomId, userId, name } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
 
     const setupPeerConnection = async (peerUserId) => {
       const peerConnection = new RTCPeerConnection();
@@ -82,9 +87,28 @@ const ChatRoom = () => {
           console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
         }
       };
+
+      // 데이터 채널 설정
+      await setupDataChannel(peerConnection, peerUserId);
   
       peerConnections[peerUserId] = peerConnection;
       return peerConnection;
+    };
+
+    const setupDataChannel = async (peerConnection, peerUserId) => {
+      const dataChannel = peerConnection.createDataChannel("chat");
+    
+      dataChannel.onopen = () => {
+        console.log("Data channel is open and ready to be used.");
+      };
+    
+      dataChannel.onmessage = event => {        
+        const data = JSON.parse(event.data);
+        const userName = getUserNameById(userList, data.userId);
+        setMessages(prevMessages => [...prevMessages, { user: userName, text: data.message }]);
+      };
+    
+      peerConnections[peerUserId].dataChannel = dataChannel;
     };
 
     const handleNewPeer = async (data) => {
@@ -97,7 +121,13 @@ const ChatRoom = () => {
     };
   
     const handleSendMessage = () => {
-      if (newMessage.trim() !== '') {     
+      if (newMessage.trim() !== '') {
+        Object.values(peerConnections).forEach(pc => {
+          if (pc.dataChannel && pc.dataChannel.readyState === "open") {
+            pc.dataChannel.send(JSON.stringify({ userId, message: newMessage }));
+          }
+        });
+        setMessages([...messages, { user: name, text: newMessage }]);
         setNewMessage('');
       }
     };
@@ -116,12 +146,15 @@ const ChatRoom = () => {
 
       // WebSocket 연결 초기화
       socket = io(serverUrl, { secure: true });
-      socket.emit('joinRoom', { userId, roomId });
+      socket.emit('joinRoom', { userId, roomId, name: name }); // 사용자의 이름을 서버로 전송
 
       socket.on('userJoined', (data) => {
         if (data.roomId === roomId) { // roomId 확인
           console.log(`${data.userId}가 채팅방에 입장했습니다.`);
           handleNewPeer(data);
+
+          // 새로운 유저 정보를 기존 목록에 추가
+          setUserList(prevUserList => [...prevUserList, { userId: data.userId, name: data.name }]);
         }
       });
 
@@ -133,6 +166,8 @@ const ChatRoom = () => {
             peerConnections[peerUserId].close(); // 해당 사용자와의 연결 종료
             delete peerConnections[peerUserId]; // 연결 객체 삭제
           }
+          // userList에서 해당 사용자 삭제
+          setUserList(prevUserList => prevUserList.filter(user => user.userId !== peerUserId));
         }
       });
 

@@ -10,14 +10,14 @@ module.exports = (server) => {
     io.on('connection', (socket) => {
         console.log('새로운 클라이언트가 연결되었습니다:', socket.id);
 
-        socket.on('joinRoom', ({ userId, roomId }) => {
-            console.log(`${userId} has joined room ${roomId}`);
+        socket.on('joinRoom', ({ userId, roomId, name }) => {
+            console.log(`${userId} has joined room ${roomId}/${userId}/${name}`);
             socket.join(roomId);
-            io.to(roomId).emit('userJoined', { userId }); // 모든 클라이언트에게 전송
+            io.to(roomId).emit('userJoined', { userId, name }); // 모든 클라이언트에게 전송
         });
 
         socket.on('leaveRoom', ({ userId, roomId }) => {
-            console.log(`${userId} has left room ${roomId}`);
+            console.log(`${userId} has left room ${roomId}/${userId}`);
             socket.leave(roomId);
             io.to(roomId).emit('userLeft', { userId }); // 모든 클라이언트에게 전송
         });
