@@ -1,10 +1,7 @@
-import React , { useEffect, useState } from 'react';
+import React , { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import USERS from '../mock/users.json'
 import io from 'socket.io-client';
-
-let socket;
-let peerConnections = {};
 
 const fetchUserList = async (roomId) => {
   const host = process.env.REACT_APP_API_HOST;
@@ -49,237 +46,234 @@ const leaveChatRoom = async (userId, roomId) => {
   }
 };
 
-const getUserNameById = (userList, userId) => {
-  const user = userList.find(user => user.userId === userId);
-  return user ? user.name : '알 수 없는 사용자';
-};
-
 const ChatRoom = () => {
-    //사용자 목록
-    const [userList, setUserList] = useState([]);
-  
-    // 채팅 메시지 목록
-    const [messages, setMessages] = useState([]);
-  
-    // 입력한 채팅 메시지
-    const [newMessage, setNewMessage] = useState('');
-  
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { roomId, userId, name } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
+  const [userList, setUserList] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [socket, setSocket] = useState(null);
+  const [users, setUsers] = useState([]);
+  const localStreamRef = useRef();
+  const userStreamRefs = useRef({});
+  const peerConnections = useRef({});
+  const dataChannels = useRef({});
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { roomId, userId, name } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
 
-    const setupPeerConnection = async (peerUserId) => {
-      const peerConnection = new RTCPeerConnection();
-      peerConnections[peerUserId] = peerConnection; // 여기로 이동
+  useEffect(() => {
+    const host = process.env.REACT_APP_API_HOST;
+    const port = process.env.REACT_APP_API_PORT;
+    const serverUrl = `${host}:${port}`
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-  
-      peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          socket.emit('candidate', { from: userId, to: peerUserId, candidate: event.candidate, roomId: roomId });
+    const newSocket = io(serverUrl);
+    setSocket(newSocket);
+
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
+      localStreamRef.current.srcObject = stream;
+
+      newSocket.emit('join', { roomId: roomId, userId: userId, name: name });
+
+      newSocket.on('allUsers', async (otherUsers) => {
+        console.log(`이벤트: allUsers, 데이터: ${JSON.stringify(otherUsers)}`);
+        setUsers(prevUsers => [...prevUsers, ...otherUsers]);
+
+        for (const user of otherUsers) {
+          const peerConnection = createPeerConnection(newSocket, user.userId);
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          newSocket.emit('offer', { sdp: offer, to: user.userId });
         }
-      };
-  
-      peerConnection.ontrack = event => {
-        // 여기서 받은 트랙을 재생할 수 있습니다.
-        const remoteAudio = document.getElementById('remoteAudio'); // HTML에서 오디오 태그의 ID
-        if (remoteAudio.srcObject !== event.streams[0]) {
-          remoteAudio.srcObject = event.streams[0]; // 수신된 스트림을 오디오 태그의 소스로 설정
-          console.log('오디오 트랙이 추가되었습니다:', event.streams[0]);
+      });
+
+      newSocket.on('userJoined', async (data) => {
+        console.log(`이벤트: userJoined, 데이터: ${JSON.stringify(data)}`);
+        setUsers(prevUsers => [...prevUsers, { userId: data.userId, name: data.name }]); // Changed this line
+      });
+
+      newSocket.on('offer', async (data) => {
+        console.log(`이벤트: offer, 데이터: ${JSON.stringify(data)}`);
+        const { sdp, from } = data;        
+        const peerConnection = createPeerConnection(newSocket, from);
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        newSocket.emit('answer', { sdp: answer, to: from });
+      });
+
+      newSocket.on('answer', async (data) => {
+        console.log(`이벤트: answer, 데이터: ${JSON.stringify(data)}`);
+        const { sdp, from } = data;
+        const peerConnection = peerConnections.current[from];
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+      });
+
+      newSocket.on('candidate', async (data) => {
+        console.log(`이벤트: candidate, 데이터: ${JSON.stringify(data)}`);
+        const { candidate, from } = data;
+        const peerConnection = peerConnections.current[from];
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      });
+
+      newSocket.on('userDisconnected', (userId) => {
+        console.log(`이벤트: userDisconnected, 유저아이디: ${userId}`);
+        const peerConnection = peerConnections.current[userId];
+        if (peerConnection) {
+          peerConnection.close();
+          delete peerConnections.current[userId];
+          delete dataChannels.current[userId];
+          delete userStreamRefs.current[userId];
+          setUsers((prevUsers) => prevUsers.filter((user) => user.userId !== userId));
         }
-      };
+      });
+    });
 
-      // 데이터 채널 설정
-      await setupDataChannel(peerConnection, peerUserId);
-  
-      return peerConnection;
-    };
-
-    const setupDataChannel = async (peerConnection, peerUserId) => {
-      const dataChannel = peerConnection.createDataChannel("chat");
-    
-      dataChannel.onopen = () => {
-        console.log("Data channel is open and ready to be used.");
-      };
-    
-      dataChannel.onmessage = event => {        
-        const data = JSON.parse(event.data);
-        const userName = getUserNameById(userList, data.userId);
-        setMessages(prevMessages => [...prevMessages, { user: userName, text: data.message }]);
-      };
-    
-      peerConnections[peerUserId].dataChannel = dataChannel;
-    };
-
-    const handleNewPeer = async (data) => {
-      const {peerUserId} = data;
-      console.log(`peerUserId: ${peerUserId}`);
-      const peerConnection = await setupPeerConnection(peerUserId);
-  
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      socket.emit('offer', { from: userId, to: peerUserId, offer: offer, roomId: roomId }); // 수정된 부분
-    };
-  
-    const handleSendMessage = () => {
-      if (newMessage.trim() !== '') {
-        Object.values(peerConnections).forEach(pc => {
-          if (pc.dataChannel && pc.dataChannel.readyState === "open") {
-            pc.dataChannel.send(JSON.stringify({ userId, message: newMessage }));
-          }
-        });
-        setMessages([...messages, { user: name, text: newMessage }]);
-        setNewMessage('');
+    const init = async () => {
+      const data = await fetchUserList(roomId);
+      setUserList(data);
+      if (userId && name) { // userId와 name이 유효한 경우에만 사용자 추가
+        console.log(`users 세팅 userId: ${userId}, name: ${name}`);
+        setUsers(prevUsers => [...prevUsers, { userId, name }]);
       }
     };
-  
-    const handleLeaveRoom = async () => {      
-      // 요청 성공 후 메인 페이지로 이동
-      navigate("/");
+    init();
+
+    // 컴포넌트 언마운트 시 실행될 로직
+    return async () => {
+      await leaveChatRoom(userId, roomId);
+      newSocket.close();
+    };
+  }, [roomId, userId]); // roomId와 userId가 변경될 때만 실행
+
+  const createPeerConnection = (socket, userId) => {
+    console.log(`createPeerConnection 유저아이디: ${userId}`);
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: 'stun:stun.l.google.com:19302',
+        },
+      ],
+    });
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('candidate', { candidate: event.candidate, to: userId });
+      }
     };
 
-    //API 호출을 위한 useEffect
-    useEffect(() => {
-      // 환경 변수에서 호스트와 포트 정보 가져오기
-      const host = process.env.REACT_APP_API_HOST;
-      const port = process.env.REACT_APP_API_PORT;
-      const serverUrl = `${host}:${port}`
+    peerConnection.ontrack = (event) => {
+      userStreamRefs.current[userId].srcObject = event.streams[0];
+    };
 
-      // WebSocket 연결 초기화
-      socket = io(serverUrl, { secure: true });
-      socket.emit('joinRoom', { userId, roomId, name: name }); // 사용자의 이름을 서버로 전송
+    peerConnection.ondatachannel = (event) => {
+      console.log(`peerConnection.ondatachannel event: ${event}`)
+      const dataChannel = event.channel;
+      dataChannel.onmessage = (event) => {
+        console.log(`Data channel message: ${event.data}`);
+        const message = JSON.parse(event.data);
+        setMessages((prevMessages) => [...prevMessages, message]);
+      };
+      dataChannels.current[userId] = dataChannel;
+    };
 
-      socket.on('userJoined', (data) => {
-        if (data.roomId === roomId && data.userId !== userId) { // roomId 확인 및 자기 자신 제외
-          console.log(`${data.userId}가 채팅방에 입장했습니다.`);
-          handleNewPeer({ peerUserId: data.userId }); // 수정된 부분
-          setUserList(prevUserList => [...prevUserList, { userId: data.userId, name: data.name }]);
-        }
-      });
+    localStreamRef.current.srcObject.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStreamRef.current.srcObject);
+    });
 
-      socket.on('userLeft', (data) => {
-        if (data.roomId === roomId ) { // roomId 확인
-          console.log(`${data.userId}가 채팅방에서 나갔습니다.`);
-          const peerUserId = data.userId;
-          if (peerConnections[peerUserId]) {
-            peerConnections[peerUserId].close(); // 해당 사용자와의 연결 종료
-            delete peerConnections[peerUserId]; // 연결 객체 삭제
-          }
-          // userList에서 해당 사용자 삭제
-          setUserList(prevUserList => prevUserList.filter(user => user.userId !== peerUserId));
-        }
-      });
+    peerConnections.current[userId] = peerConnection;
 
-      socket.on('offer', async data => {
-        if (data.roomId === roomId && data.to === userId) { // 새 사용자가 offer를 받음
-          const peerConnection = new RTCPeerConnection();
-          peerConnections[data.from] = peerConnection; // 새 사용자가 기존 사용자와의 연결 객체를 생성
-    
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-    
-          peerConnection.onicecandidate = event => {
-            if (event.candidate) {
-              socket.emit('candidate', { from: userId, to: data.from, candidate: event.candidate, roomId: roomId });
-            }
-          };
-    
-          peerConnection.ontrack = event => {
-            const remoteAudio = document.getElementById('remoteAudio');
-            if (remoteAudio.srcObject !== event.streams[0]) {
-              remoteAudio.srcObject = event.streams[0];
-            }
-          };
-    
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          socket.emit('answer', { from: userId, to: data.from, answer: answer, roomId: roomId });
-        }
-      });
-  
-      socket.on('answer', data => {
-        if (data.roomId === roomId) { // roomId 확인
-          const peerConnection = peerConnections[data.from];
-          peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        }
-      });
-  
-      socket.on('candidate', data => {
-        if (data.roomId === roomId && data.from && peerConnections[data.from]) {
-          const peerConnection = peerConnections[data.from];
-          peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    const dataChannel = peerConnection.createDataChannel('chat');
+    dataChannel.onopen = () => {
+      console.log(`Data channel with user ${userId} is now open.`);
+    };
+    dataChannel.onclose = () => {
+      console.log(`Data channel with user ${userId} has been closed.`);
+    };
+    dataChannel.onerror = (error) => {
+      console.error(`Data channel error with user ${userId}: ${error}`);
+    };
+    dataChannel.onmessage = (event) => {
+      console.log(`Data channel message event: ${event}`);
+      const message = JSON.parse(event.data);
+      setMessages((prevMessages) => [...prevMessages, message]);
+    };
+    dataChannels.current[userId] = dataChannel;
+
+    return peerConnection;
+  };
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() !== '') {
+      const message = { user: name, text: newMessage };
+      setMessages((prevMessages) => [...prevMessages, message]);
+      for (const userId in dataChannels.current) {
+        const dataChannel = dataChannels.current[userId];
+        if (dataChannel.readyState === 'open') {
+          dataChannel.send(JSON.stringify(message));
         } else {
-          console.error('candidate 정보가 올바르지 않습니다:', data);
+          console.error(`Data channel for user ${userId} is not open. Current state: ${dataChannel.readyState}`);
         }
-      });
+      }
+      setNewMessage('');
+    }
+  };
+  
+  const handleLeaveRoom = async () => {
+    navigate("/");
+  };
 
-      // 기존 유저 목록 가져오기 로직
-      const init = async () => {
-        const data = await fetchUserList(roomId);
-        setUserList(data);
-      };
-      init();
-
-      // 컴포넌트 언마운트 시 실행될 로직
-      return async () => {
-        // 사용자 목록 삭제 요청
-        await leaveChatRoom(userId, roomId); // userId와 roomId를 전송
-        Object.values(peerConnections).forEach(pc => pc.close());
-        socket.emit('leaveRoom', { userId, roomId });
-        socket.disconnect();
-      };
-    }, [roomId, userId]); // roomId와 userId가 변경될 때만 실행
-
-    return (
-      <div className="chat-room">
-        <div className="left">
-          <div className="user-list">
-            <h2>참여자</h2>
-            <ul>
-              {userList.map((user) => (
-                <div key={user.userId}>
-                  <li>{user.name}</li>
-                  <button>소리</button>
-                  <button>마이크</button>
-                  <button>채팅</button>
-                  <button>강제퇴장</button>
-                </div>
-              ))}
-            </ul>
-          </div>
-          <div className="leave-button">
-            <button onClick={handleLeaveRoom}>채팅방 나가기</button>
-          </div>
-        </div>
-        <div className="right">
-          <h2>채팅 내용</h2>
-          <div className="messages">
-            {messages.map((message, index) => (
-              <div key={index} className="message">
-                <strong>{message.user}:</strong> {message.text}
+  return (
+    <div className="chat-room">
+      <div>
+        <audio ref={localStreamRef} autoPlay muted />
+        {users.map((user) => (
+          <audio key={user.userId} ref={(el) => (userStreamRefs.current[user.userId] = el)} autoPlay />
+        ))}
+      </div>
+      <div className="left">
+        <div className="user-list">
+          <h2>참여자</h2>
+          <ul>
+            {users.map((user) => (
+              <div key={user.userId}>
+                <li>{user.name}</li>
+                <button>소리</button>
+                <button>마이크</button>
+                <button>채팅</button>
+                <button>강제퇴장</button>
               </div>
             ))}
-          </div>
-          <div className="input-area">
-            <input
-              type="text"
-              placeholder="메시지를 입력하세요..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSendMessage();
-                }
-              }}
-            />
-            <button onClick={handleSendMessage}>전송</button>
-          </div>
+          </ul>
         </div>
-        <audio id="remoteAudio" style={{ display: 'none' }}></audio>
+        <div className="leave-button">
+          <button onClick={handleLeaveRoom}>채팅방 나가기</button>
+        </div>
       </div>
-    );
-  }
+      <div className="right">
+        <h2>채팅 내용</h2>
+        <div className="messages">
+          {messages.map((message, index) => (
+            <div key={index} className="message">
+              <strong>{message.user}:</strong> {message.text}
+            </div>
+          ))}
+        </div>
+        <div className="input-area">
+          <input
+            type="text"
+            placeholder="메시지를 입력하세요..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSendMessage();
+              }
+            }}
+          />
+          <button onClick={handleSendMessage}>전송</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  export default ChatRoom;
+export default ChatRoom;
