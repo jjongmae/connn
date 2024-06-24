@@ -174,3 +174,60 @@ exports.leaveChatRoom = async (req, res) => {
     }
 };
 
+// 한글 초성 변환 함수
+function convertToChosung(str) {
+    const CHOSUNG = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+    const BASE_CODE = 44032;
+    const CHOSUNG_INTERVAL = 588;
+
+    return str.split('').map(char => {
+        const code = char.charCodeAt(0) - BASE_CODE;
+        if (code >= 0 && code <= 11171) {
+            return CHOSUNG[Math.floor(code / CHOSUNG_INTERVAL)];
+        }
+        return char;
+    }).join('');
+}
+
+exports.searchChatRoom = async (req, res) => {
+    const { categoryId, searchQuery } = req.body; // req.params에서 req.body로 변경
+    console.log(`searchChatRoom categoryId: ${categoryId}, searchQuery: ${searchQuery}`);
+    try {
+        let query = `
+            SELECT chat_rooms.*, categories.category_name
+            FROM chat_rooms
+            JOIN categories ON chat_rooms.category_id = categories.category_id
+            WHERE 1=1
+        `;
+        let queryParams = [];
+
+        if (categoryId && !isNaN(categoryId)) { // categoryId가 숫자인지 확인
+            query += ` AND chat_rooms.category_id = ?`;
+            queryParams.push(categoryId);
+        }
+
+        if (searchQuery && searchQuery.trim() !== '') {
+            const chosungQuery = convertToChosung(searchQuery);
+            query += ` AND (chat_rooms.title LIKE ? OR chat_rooms.title LIKE ?)`;
+            queryParams.push(`%${searchQuery}%`, `%${chosungQuery}%`);
+        }
+
+        const [chatRooms, ] = await db.query(query, queryParams);
+
+        for (let room of chatRooms) {
+            const [userListResult, ] = await db.query(`
+                SELECT users.name 
+                FROM users 
+                WHERE users.room_id = ?
+            `, [room.room_id]);
+            const userList = userListResult.map(user => user.name);
+            room.user_list = userList;
+            room.user_count = userList.length;
+        }
+
+        res.json(chatRooms);
+    } catch (err) {
+        console.error(`searchChatRoom 에러: ${err}`);
+        res.status(500).json({ message: err.message });
+    }
+};

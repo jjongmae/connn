@@ -2,6 +2,8 @@ import React , { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CATEGORY from '../mock/category.json';
 import CHATLIST from '../mock/chatList.json';
+import { useCallback } from 'react';
+import _ from 'lodash';
 
 const fetchCategories = async () => {
   const host = process.env.REACT_APP_API_HOST;
@@ -22,7 +24,7 @@ const fetchCategories = async () => {
   }
 };
 
-const fetchChatList = async () => {
+const fetchChatRooms = async () => {
   const host = process.env.REACT_APP_API_HOST;
   const port = process.env.REACT_APP_API_PORT;
   const url = `${host}:${port}/chatRooms/`;
@@ -42,17 +44,18 @@ const fetchChatList = async () => {
 };
 
 // 카테고리에 따라 채팅 목록을 가져오는 함수
-const fetchChatListByCategory = async (categoryId) => {
+const fetchSearchChatRooms = async (categoryId, searchQuery) => {
   const host = process.env.REACT_APP_API_HOST;
   const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/chatRooms/category/${categoryId}`;
+  const url = `${host}:${port}/chatRooms/search`;
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({ categoryId, searchQuery }) // userId와 roomId를 JSON 형태로 전송
     });
     const data = await response.json();
     return data;
@@ -123,12 +126,25 @@ const formatRelativeTime = (dateString) => {
   }
 };
 
-const Search = () => {
-    return (
-      <div className="search">
-        <input className="input" type="text" placeholder="검색어 입력"/>
-      </div>
-    );
+const Search = ({ setSearchQuery }) => {
+  const handleInputChange = useCallback(
+    _.debounce((event) => {
+      console.log(`setSearchQuery: ${event.target.value}`);
+      setSearchQuery(event.target.value);
+    }, 300), // 300ms 디바운스 시간
+    []
+  );
+
+  return (
+    <div className="search">
+      <input
+        className="input"
+        type="text"
+        placeholder="검색어 입력"
+        onChange={handleInputChange}
+      />
+    </div>
+  );
 }
   
 const Category = ({ selectedCategory, setSelectedCategory }) => {
@@ -142,7 +158,7 @@ const Category = ({ selectedCategory, setSelectedCategory }) => {
     };
 
     init();
-  }, [setSelectedCategory]);
+  }, []);
 
   return (
     <div className="category">
@@ -252,7 +268,7 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
   const [roomInfo, setRoomInfo] = useState({
     categoryId: '',
     title: '',
-    totalMembers: '',
+    totalMembers: '2',
     name: ''
   });
   const navigate = useNavigate();
@@ -312,7 +328,14 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
           </div>
           <div className="form-group">
               <label>인원수</label>
-              <input type="text" name="totalMembers" value={roomInfo.totalMembers} onChange={handleInputChange} />
+              <input 
+                type="number" 
+                name="totalMembers" 
+                value={roomInfo.totalMembers} 
+                onChange={handleInputChange} 
+                min="2" 
+                max="50" 
+              />
           </div>
           <div className="form-group">
               <label>닉네임</label>
@@ -329,19 +352,22 @@ const MainPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [chatList, setChatList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(null);
 
   // 카테고리가 변경될 때마다 채팅 목록 갱신
   useEffect(() => {
+    console.log(`useEffect() refreshChatList`);
     const refreshChatList = async () => {
-      const data = await fetchChatListByCategory(selectedCategory);
+      const data = await fetchSearchChatRooms(selectedCategory, searchQuery);
       setChatList(data);
     };
     refreshChatList();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
+    console.log(`useEffect() init`);
     const init = async () => {
-      const data = await fetchChatList();
+      const data = await fetchChatRooms();
       setChatList(data);
     };
 
@@ -350,7 +376,7 @@ const MainPage = () => {
 
   return (
     <div>
-      <Search />
+      <Search setSearchQuery={setSearchQuery} />
       <Category selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />
       <ChatList chatList={chatList} />
       <FloatingButton setIsModalOpen={setIsModalOpen} />
