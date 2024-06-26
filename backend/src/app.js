@@ -9,8 +9,6 @@ var humps = require('humps');
 var indexRouter = require('./routes/index');
 var categoriesRouter = require('./routes/categoriesRouter');
 var chatRoomsRouter = require('./routes/chatRoomsRouter')
-var usersRouter = require('./routes/usersRouter');
-
 var app = express();
 
 // JSON 응답을 카멜 케이스로 변환하는 미들웨어
@@ -38,7 +36,6 @@ app.use(camelCaseMiddleware);
 app.use('/', indexRouter);
 app.use('/categories', categoriesRouter);
 app.use('/chatRooms', chatRoomsRouter);
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

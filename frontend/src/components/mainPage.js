@@ -1,7 +1,5 @@
 import React , { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CATEGORY from '../mock/category.json';
-import CHATLIST from '../mock/chatList.json';
 import { useCallback } from 'react';
 import _ from 'lodash';
 
@@ -81,32 +79,6 @@ const fetchCreateChatRoom = async (roomInfo) => {
     return data;
   } catch (error) {
     console.error('채팅방을 생성하는데 실패했습니다:', error);
-  }
-};
-
-const fetchRegisterUser = async (roomId, name) => {
-  const host = process.env.REACT_APP_API_HOST;
-  const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/users`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ roomId, name })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP 상태 코드: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.userId;
-  } catch (error) {
-    console.error('사용자 등록에 실패했습니다:', error);
-    throw error;
   }
 };
 
@@ -202,7 +174,9 @@ const ChatList = ({ chatList= [] }) => {
           onMouseLeave={handleMouseLeave}>
           <div className="title">{chat.title}</div>
           <div className="count">{`${chat.userCount}/${chat.totalMembers}`}</div>
-          <div className="user">{chat.userList ? chat.userList.join(", ") : ""}</div>
+          <div className="user">
+            {chat.userList ? chat.userList.map(user => user.name).join(", ") : ""}
+          </div>
           <div className="card-category">{chat.categoryName}</div>
           <div className="date">
             {formatRelativeTime(chat.updatedAt)}
@@ -223,8 +197,8 @@ const EnterChatModal = ({ isOpen, setIsOpen, roomId }) => {
   const handleEnterChat = async (name) => {
     if (name) {
       try {
-        const userId = await fetchRegisterUser(roomId, name);
-        navigate("/chatroom", { state: { roomId, userId, name} });
+        const auth = 'guest';
+        navigate("/chatroom", { state: { roomId, name, auth } });
         setIsOpen(false); // 모달 닫기
       } catch (error) {
         console.error('사용자 등록 실패:', error);
@@ -287,7 +261,7 @@ const CreateChatRoom = ({ setIsModalOpen }) => {
       const createdRoom = await fetchCreateChatRoom(roomInfo);
       console.log('Room Info:', roomInfo);
       setIsModalOpen(false);
-      navigate("/chatroom", { state: { roomId: createdRoom.roomId, userId: createdRoom.userId, name: roomInfo.name } });
+      navigate("/chatroom", { state: { roomId: createdRoom.roomId, name: roomInfo.name, auth: 'manager' } });
     } catch (error) {
       console.error('채팅방 생성 중 오류 발생:', error);
     }

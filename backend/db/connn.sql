@@ -49,29 +49,9 @@ CREATE TABLE IF NOT EXISTS `chat_rooms` (
   `updated_at` timestamp NULL DEFAULT current_timestamp(),
   `status` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`room_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=85 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 테이블 데이터 connn.chat_rooms:~2 rows (대략적) 내보내기
-INSERT INTO `chat_rooms` (`room_id`, `category_id`, `title`, `total_members`, `created_at`, `updated_at`, `status`) VALUES
-	(1, 2, '캐니언 모십니다', 5, '2024-05-28 06:42:34', '2024-05-28 06:42:34', 'active'),
-	(2, 2, '롤 한판하까?', 5, '2024-05-30 07:08:29', '2024-05-30 07:08:29', 'active');
-
--- 테이블 connn.users 구조 내보내기
-CREATE TABLE IF NOT EXISTS `users` (
-  `user_id` int(11) NOT NULL AUTO_INCREMENT,
-  `room_id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `status` varchar(50) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`user_id`) USING BTREE,
-  UNIQUE KEY `idx_room_id_name` (`room_id`,`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- 테이블 데이터 connn.users:~2 rows (대략적) 내보내기
-INSERT INTO `users` (`user_id`, `room_id`, `name`, `status`, `created_at`, `updated_at`) VALUES
-	(1, 1, '쉘던', 'active', '2024-05-30 06:13:52', '2024-05-30 06:13:52'),
-	(2, 1, '레너드', 'active', '2024-05-30 06:14:02', '2024-05-30 06:14:02');
+-- 테이블 데이터 connn.chat_rooms:~0 rows (대략적) 내보내기
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

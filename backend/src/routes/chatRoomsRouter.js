@@ -7,7 +7,6 @@ router.post('/', chatRoomController.createChatRoom);
 router.get('/:id', chatRoomController.getChatRoom);
 router.put('/:id', chatRoomController.updateChatRoom);
 router.delete('/:id', chatRoomController.deleteChatRoom);
-router.post('/leave', chatRoomController.leaveChatRoom);
 router.post('/search', chatRoomController.searchChatRoom);
 
 module.exports = router;

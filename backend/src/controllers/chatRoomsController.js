@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const { getRoomUsers } = require('../socket');
 
 exports.getAllChatRooms = async (req, res) => {
     try {
@@ -7,18 +8,12 @@ exports.getAllChatRooms = async (req, res) => {
             FROM chat_rooms 
             JOIN categories ON chat_rooms.category_id = categories.category_id
         `);
-
         for (let room of chatRooms) {
-            const [userListResult, ] = await db.query(`
-                SELECT users.name 
-                FROM users 
-                WHERE users.room_id = ?
-            `, [room.room_id]);
-            const userList = userListResult.map(user => user.name);
-            room.user_list = userList;  // 직접 배열을 할당
+            const userList = getRoomUsers(room.room_id);
+            console.log(`userList: ${JSON.stringify(userList)}`);
+            room.user_list = userList;
             room.user_count = userList.length;
         }
-
         res.json(chatRooms);
     } catch (err) {
         console.error(`getAllChatRooms 에러: ${err.message}`); // 에러 로그 한글로 기록
@@ -27,26 +22,16 @@ exports.getAllChatRooms = async (req, res) => {
 };
 
 exports.createChatRoom = async (req, res) => {
-    const { categoryId, title, totalMembers, name } = req.body;
-    const connection = await db.getConnection();
+    const { categoryId, title, totalMembers } = req.body;
     try {
-        await connection.beginTransaction(); // 트랜잭션 시작
-
         // 채팅방 생성
-        const [roomResult] = await connection.query(`INSERT INTO chat_rooms (category_id, title, total_members, status) VALUES (?, ?, ?, 'active')`, [categoryId, title, totalMembers]);
+        const [roomResult] = await db.query(`INSERT INTO chat_rooms (category_id, title, total_members, status) VALUES (?, ?, ?, 'active')`, [categoryId, title, totalMembers]);
         const roomId = roomResult.insertId;
 
-        // 사용자 생성
-        const [userResult] = await connection.query(`INSERT INTO users (name, room_id, status) VALUES (?, ?, 'active')`, [name, roomId]);
-
-        await connection.commit(); // 모든 쿼리 성공 시 커밋
-        res.status(201).json({ message: '채팅방과 사용자가 생성되었습니다', room_id: roomId, user_id: userResult.insertId });
+        res.status(201).json({ message: '채팅방이 생성되었습니다', room_id: roomId });
     } catch (err) {
         console.error(`createChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
-        await connection.rollback(); // 에러 발생 시 롤백
         res.status(500).json({ message: err.message });
-    } finally {
-        connection.release(); // 커넥션 반환
     }
 };
 
@@ -62,15 +47,9 @@ exports.getChatRoom = async (req, res) => {
 
         if (results.length > 0) {
             const room = results[0];
-            const [userListResult, ] = await db.query(`
-                SELECT users.name 
-                FROM users 
-                WHERE users.room_id = ?
-            `, [room.room_id]);
-            const userList = userListResult.map(user => user.name);
+            const userList = getRoomUsers(room.room_id);
             room.user_list = userList;
             room.user_count = userList.length;
-
             res.json(room);
         } else {
             res.status(404).json({ message: '채팅방을 찾을 수 없습니다' });
@@ -112,39 +91,6 @@ exports.deleteChatRoom = async (req, res) => {
     }
 };
 
-exports.leaveChatRoom = async (req, res) => {
-    const { roomId, userId } = req.body; // req.params에서 req.body로 변경
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction(); // 트랜잭션 시작
-
-        // 사용자 삭제
-        const [deleteUser] = await connection.query(`DELETE FROM users WHERE user_id = ? AND room_id = ?`, [userId, roomId]);
-        if (deleteUser.affectedRows === 0) {
-            throw new Error('사용자를 찾을 수 없거나 이미 삭제되었습니다');
-        }
-
-        // 해당 채팅방에 남은 사용자 수 확인
-        const [usersRemaining] = await connection.query(`SELECT COUNT(*) AS count FROM users WHERE room_id = ?`, [roomId]);
-        if (usersRemaining[0].count === 0) {
-            // 사용자가 없으면 채팅방 삭제
-            const [deleteRoom] = await connection.query(`DELETE FROM chat_rooms WHERE room_id = ?`, [roomId]);
-            if (deleteRoom.affectedRows === 0) {
-                throw new Error('채팅방을 찾을 수 없거나 이미 삭제되었습니다');
-            }
-        }
-
-        await connection.commit(); // 모든 쿼리 성공 시 커밋
-        res.json({ message: '사용자가 채팅방에서 삭제되었습니다' });
-    } catch (err) {
-        console.error(`leaveChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
-        await connection.rollback(); // 에러 발생 시 롤백
-        res.status(500).json({ message: err.message });
-    } finally {
-        connection.release(); // 커넥션 반환
-    }
-};
-
 exports.searchChatRoom = async (req, res) => {
     const { categoryId, searchQuery } = req.body; // req.params에서 req.body로 변경
     console.log(`searchChatRoom categoryId: ${categoryId}, searchQuery: ${searchQuery}`);
@@ -170,12 +116,7 @@ exports.searchChatRoom = async (req, res) => {
         const [chatRooms, ] = await db.query(query, queryParams);
 
         for (let room of chatRooms) {
-            const [userListResult, ] = await db.query(`
-                SELECT users.name 
-                FROM users 
-                WHERE users.room_id = ?
-            `, [room.room_id]);
-            const userList = userListResult.map(user => user.name);
+            const userList = getRoomUsers(room.room_id);
             room.user_list = userList;
             room.user_count = userList.length;
         }
