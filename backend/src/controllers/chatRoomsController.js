@@ -21,6 +21,7 @@ exports.getAllChatRooms = async (req, res) => {
 
         res.json(chatRooms);
     } catch (err) {
+        console.error(`getAllChatRooms 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
     }
 };
@@ -39,9 +40,9 @@ exports.createChatRoom = async (req, res) => {
         const [userResult] = await connection.query(`INSERT INTO users (name, room_id, status) VALUES (?, ?, 'active')`, [name, roomId]);
 
         await connection.commit(); // 모든 쿼리 성공 시 커밋
-        res.status(201).json({ message: 'Chat room and user created', room_id: roomId, user_id: userResult.insertId });
+        res.status(201).json({ message: '채팅방과 사용자가 생성되었습니다', room_id: roomId, user_id: userResult.insertId });
     } catch (err) {
-        console.error(err);
+        console.error(`createChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         await connection.rollback(); // 에러 발생 시 롤백
         res.status(500).json({ message: err.message });
     } finally {
@@ -72,9 +73,10 @@ exports.getChatRoom = async (req, res) => {
 
             res.json(room);
         } else {
-            res.status(404).json({ message: 'Chat room not found' });
+            res.status(404).json({ message: '채팅방을 찾을 수 없습니다' });
         }
     } catch (err) {
+        console.error(`getChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
     }
 };
@@ -85,11 +87,12 @@ exports.updateChatRoom = async (req, res) => {
     try {
         const [result, ] = await db.query('UPDATE chat_rooms SET category_id = ?, title = ?, total_members = ?, status = ? WHERE room_id = ?', [categoryId, title, totalMembers, status, id]);
         if (result.affectedRows > 0) {
-            res.json({ message: 'Chat room updated' });
+            res.json({ message: '채팅방이 업데이트되었습니다' });
         } else {
-            res.status(404).json({ message: 'Chat room not found' });
+            res.status(404).json({ message: '채팅방을 찾을 수 없습니다' });
         }
     } catch (err) {
+        console.error(`updateChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
     }
 };
@@ -99,45 +102,12 @@ exports.deleteChatRoom = async (req, res) => {
     try {
         const [result, ] = await db.query('DELETE FROM chat_rooms WHERE room_id = ?', [id]);
         if (result.affectedRows > 0) {
-            res.json({ message: 'Chat room deleted' });
+            res.json({ message: '채팅방이 삭제되었습니다' });
         } else {
-            res.status(404).json({ message: 'Chat room not found' });
+            res.status(404).json({ message: '채팅방을 찾을 수 없습니다' });
         }
     } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
-
-exports.getChatRoomsByCategory = async (req, res) => {
-    const { categoryId } = req.params;
-    try {
-        let query = `
-            SELECT chat_rooms.*, categories.category_name
-            FROM chat_rooms
-            JOIN categories ON chat_rooms.category_id = categories.category_id
-        `;
-        let queryParams = [];
-
-        if (categoryId !== '0') { // '0'으로 문자열 비교
-            query += ` WHERE chat_rooms.category_id = ?`;
-            queryParams.push(categoryId);
-        }
-
-        const [chatRooms, ] = await db.query(query, queryParams);
-
-        for (let room of chatRooms) {
-            const [userListResult, ] = await db.query(`
-                SELECT users.name 
-                FROM users 
-                WHERE users.room_id = ?
-            `, [room.room_id]);
-            const userList = userListResult.map(user => user.name);
-            room.user_list = userList;
-            room.user_count = userList.length;
-        }
-
-        res.json(chatRooms);
-    } catch (err) {
+        console.error(`deleteChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
     }
 };
@@ -151,7 +121,7 @@ exports.leaveChatRoom = async (req, res) => {
         // 사용자 삭제
         const [deleteUser] = await connection.query(`DELETE FROM users WHERE user_id = ? AND room_id = ?`, [userId, roomId]);
         if (deleteUser.affectedRows === 0) {
-            throw new Error('User not found or already removed');
+            throw new Error('사용자를 찾을 수 없거나 이미 삭제되었습니다');
         }
 
         // 해당 채팅방에 남은 사용자 수 확인
@@ -160,34 +130,20 @@ exports.leaveChatRoom = async (req, res) => {
             // 사용자가 없으면 채팅방 삭제
             const [deleteRoom] = await connection.query(`DELETE FROM chat_rooms WHERE room_id = ?`, [roomId]);
             if (deleteRoom.affectedRows === 0) {
-                throw new Error('Chat room not found or already removed');
+                throw new Error('채팅방을 찾을 수 없거나 이미 삭제되었습니다');
             }
         }
 
         await connection.commit(); // 모든 쿼리 성공 시 커밋
-        res.json({ message: 'User and possibly chat room removed' });
+        res.json({ message: '사용자가 채팅방에서 삭제되었습니다' });
     } catch (err) {
+        console.error(`leaveChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         await connection.rollback(); // 에러 발생 시 롤백
         res.status(500).json({ message: err.message });
     } finally {
         connection.release(); // 커넥션 반환
     }
 };
-
-// 한글 초성 변환 함수
-function convertToChosung(str) {
-    const CHOSUNG = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
-    const BASE_CODE = 44032;
-    const CHOSUNG_INTERVAL = 588;
-
-    return str.split('').map(char => {
-        const code = char.charCodeAt(0) - BASE_CODE;
-        if (code >= 0 && code <= 11171) {
-            return CHOSUNG[Math.floor(code / CHOSUNG_INTERVAL)];
-        }
-        return char;
-    }).join('');
-}
 
 exports.searchChatRoom = async (req, res) => {
     const { categoryId, searchQuery } = req.body; // req.params에서 req.body로 변경
@@ -207,9 +163,8 @@ exports.searchChatRoom = async (req, res) => {
         }
 
         if (searchQuery && searchQuery.trim() !== '') {
-            const chosungQuery = convertToChosung(searchQuery);
-            query += ` AND (chat_rooms.title LIKE ? OR chat_rooms.title LIKE ?)`;
-            queryParams.push(`%${searchQuery}%`, `%${chosungQuery}%`);
+            query += ` AND chat_rooms.title LIKE ?`;
+            queryParams.push(`%${searchQuery}%`);
         }
 
         const [chatRooms, ] = await db.query(query, queryParams);
@@ -227,7 +182,7 @@ exports.searchChatRoom = async (req, res) => {
 
         res.json(chatRooms);
     } catch (err) {
-        console.error(`searchChatRoom 에러: ${err}`);
+        console.error(`searchChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
     }
 };

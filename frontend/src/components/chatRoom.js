@@ -59,6 +59,9 @@ const ChatRoom = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { roomId, userId, name } = location.state || {}; // state가 없는 경우를 대비하여 기본값 설정
+  const [userAudioStatus, setUserAudioStatus] = useState([]);
+  const [microphoneStatus, setMicrophoneStatus] = useState(true); // 마이크 상태 추가
+  const [userChatStatus, setUserChatStatus] = useState([]);
 
   useEffect(() => {
     const host = process.env.REACT_APP_API_HOST;
@@ -76,18 +79,38 @@ const ChatRoom = () => {
       newSocket.on('allUsers', async (otherUsers) => {
         console.log(`이벤트: allUsers, 데이터: ${JSON.stringify(otherUsers)}`);
         setUsers(prevUsers => [...prevUsers, ...otherUsers]);
-
+        
         for (const user of otherUsers) {
           const peerConnection = createPeerConnection(newSocket, user.userId);
           const offer = await peerConnection.createOffer();
           await peerConnection.setLocalDescription(offer);
           newSocket.emit('offer', { sdp: offer, to: user.userId });
+          setUserAudioStatus(prevStatus => ({
+            ...prevStatus,
+            [user.userId]: true,
+          }));
+          console.log(`userAudioStatus: ${JSON.stringify(userAudioStatus)}`);
+          setUserChatStatus(prevStatus => ({
+            ...prevStatus,
+            [user.userId]: true,
+          }));
+          console.log(`userChatStatus: ${JSON.stringify(userChatStatus)}`);
         }
       });
 
       newSocket.on('userJoined', async (data) => {
         console.log(`이벤트: userJoined, 데이터: ${JSON.stringify(data)}`);
-        setUsers(prevUsers => [...prevUsers, { userId: data.userId, name: data.name }]); // Changed this line
+        setUsers(prevUsers => [...prevUsers, { userId: data.userId, name: data.name }]);
+        setUserAudioStatus(prevStatus => ({
+          ...prevStatus,
+          [data.userId]: true,
+        }));
+        console.log(`userAudioStatus: ${JSON.stringify(userAudioStatus)}`);
+        setUserChatStatus(prevStatus => ({
+          ...prevStatus,
+          [data.userId]: true,
+        }));
+        console.log(`userChatStatus: ${JSON.stringify(userChatStatus)}`);
       });
 
       newSocket.on('offer', async (data) => {
@@ -168,9 +191,13 @@ const ChatRoom = () => {
       console.log(`peerConnection.ondatachannel event: ${event}`)
       const dataChannel = event.channel;
       dataChannel.onmessage = (event) => {
-        console.log(`Data channel message: ${event.data}`);
         const message = JSON.parse(event.data);
-        setMessages((prevMessages) => [...prevMessages, message]);
+        setUserChatStatus((prevStatus) => {
+          if (prevStatus[message.userId] !== false) {
+            setMessages((prevMessages) => [...prevMessages, message]);
+          }
+          return prevStatus;
+        });
       };
       dataChannels.current[userId] = dataChannel;
     };
@@ -194,7 +221,12 @@ const ChatRoom = () => {
     dataChannel.onmessage = (event) => {
       console.log(`Data channel message event: ${event}`);
       const message = JSON.parse(event.data);
-      setMessages((prevMessages) => [...prevMessages, message]);
+      setUserChatStatus((prevStatus) => {
+        if (prevStatus[message.userId] !== false) {
+          setMessages((prevMessages) => [...prevMessages, message]);
+        }
+        return prevStatus;
+      });
     };
     dataChannels.current[userId] = dataChannel;
 
@@ -203,14 +235,16 @@ const ChatRoom = () => {
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== '') {
-      const message = { user: name, text: newMessage };
+      const message = { user: name, text: newMessage, userId: userId };
       setMessages((prevMessages) => [...prevMessages, message]);
       for (const userId in dataChannels.current) {
-        const dataChannel = dataChannels.current[userId];
-        if (dataChannel.readyState === 'open') {
-          dataChannel.send(JSON.stringify(message));
-        } else {
-          console.error(`Data channel for user ${userId} is not open. Current state: ${dataChannel.readyState}`);
+        if (userChatStatus[userId] !== false) { // userChatStatus가 false가 아닌 경우에만 전송
+          const dataChannel = dataChannels.current[userId];
+          if (dataChannel.readyState === 'open') {
+            dataChannel.send(JSON.stringify(message));
+          } else {
+            console.error(`Data channel for user ${userId} is not open. Current state: ${dataChannel.readyState}`);
+          }
         }
       }
       setNewMessage('');
@@ -219,6 +253,42 @@ const ChatRoom = () => {
   
   const handleLeaveRoom = async () => {
     navigate("/");
+  };
+
+  const toggleAudio = (userId) => {
+    console.log(`toggleAudio 호출 userId: ${userId}`);
+    const audioElement = userStreamRefs.current[userId];    
+    if (audioElement) {
+      const isMuted = !audioElement.muted;
+      audioElement.muted = isMuted;
+      console.log(`userAudioStatus: ${JSON.stringify(userAudioStatus)}`);
+      setUserAudioStatus((prevStatus) => ({
+        ...prevStatus,
+        [userId]: !isMuted,
+      }));
+    } else{
+      console.error(`audioElement is undefined`);
+    }
+  };
+
+  const toggleMicrophone = () => {
+    console.log(`toggleMicrophone 호출`);
+    const audioTracks = localStreamRef.current.srcObject.getAudioTracks();
+    if (audioTracks.length > 0) {
+        const enabled = audioTracks[0].enabled;
+        audioTracks[0].enabled = !enabled;
+        setMicrophoneStatus(!enabled); // 마이크 상태 업데이트
+    }
+  };
+
+  const toggleChat = (userId) => {
+    console.log(`toggleChat 호출 userId: ${userId}`);
+    console.log(`userChatStatus: ${JSON.stringify(userChatStatus)}`);
+    setUserChatStatus((prevStatus) => ({
+      ...prevStatus,
+      [userId]: !prevStatus[userId],
+    }));
+    console.log(`userChatStatus: ${JSON.stringify(userChatStatus)}`);
   };
 
   return (
@@ -236,9 +306,27 @@ const ChatRoom = () => {
             {users.map((user) => (
               <div key={user.userId}>
                 <li>{user.name}</li>
-                <button>소리</button>
-                <button>마이크</button>
-                <button>채팅</button>
+                <button 
+                  onClick={() => toggleAudio(user.userId)} 
+                  style={{ backgroundColor: userAudioStatus[user.userId] ? 'green' : 'red', ...(user.userId === userId && { backgroundColor: '' }) }}
+                  disabled={user.userId === userId}
+                >
+                  소리
+                </button>
+                <button 
+                  onClick={toggleMicrophone} 
+                  style={{ backgroundColor: microphoneStatus ? 'green' : 'red', ...(user.userId !== userId && { backgroundColor: '' }) }}
+                  disabled={user.userId !== userId}
+                >
+                  마이크
+                </button>
+                <button
+                  onClick={() => toggleChat(user.userId)}
+                  style={{ backgroundColor: userChatStatus[user.userId] ? 'green' : 'red', ...(user.userId === userId && { backgroundColor: '' }) }}
+                  disabled={user.userId === userId}
+                >
+                  채팅
+                </button>
                 <button>강제퇴장</button>
               </div>
             ))}
