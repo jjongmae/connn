@@ -258,7 +258,7 @@ const ChatRoom = () => {
           <ul>
             {users.map((user) => (
               <div key={user.userId}>
-                <li>{user.name}</li>
+                <li>{user.name} {user.auth === 'manager' && '(방장)'}</li>
                 <button 
                   onClick={() => toggleAudio(user.userId)} 
                   style={{ backgroundColor: userAudioStatus[user.userId] ? 'green' : 'red', ...(user.userId === userId && { backgroundColor: '' }) }}
