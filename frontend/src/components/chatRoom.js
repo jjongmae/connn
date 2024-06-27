@@ -38,6 +38,12 @@ const ChatRoom = () => {
         setUsers(prevUsers => [...prevUsers, { userId, name, auth }]);
       });
 
+      newSocket.on('roomFull', async (data) => {
+        console.log(`[roomFull] data: ${JSON.stringify(data)}`);
+        alert('최대 인원을 초과했습니다.');
+        navigate(-1);
+      });
+
       newSocket.on('allUsers', async (otherUsers) => {
         console.log(`[allUsers] otherUsers: ${JSON.stringify(otherUsers)}`);
         setUsers(prevUsers => [...prevUsers, ...otherUsers]);

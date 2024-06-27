@@ -8,13 +8,13 @@ exports.getAllChatRooms = async (req, res) => {
             FROM chat_rooms 
             JOIN categories ON chat_rooms.category_id = categories.category_id
         `);
-        for (let room of chatRooms) {
+        const filteredRooms = chatRooms.filter(room => {
             const userList = getRoomUsers(room.room_id);
-            console.log(`userList: ${JSON.stringify(userList)}`);
             room.user_list = userList;
             room.user_count = userList.length;
-        }
-        res.json(chatRooms);
+            return room.user_count < room.total_members; // 필터링 조건 추가
+        });
+        res.json(filteredRooms);
     } catch (err) {
         console.error(`getAllChatRooms 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });
@@ -102,26 +102,22 @@ exports.searchChatRoom = async (req, res) => {
             WHERE 1=1
         `;
         let queryParams = [];
-
         if (categoryId && !isNaN(categoryId)) { // categoryId가 숫자인지 확인
             query += ` AND chat_rooms.category_id = ?`;
             queryParams.push(categoryId);
         }
-
         if (searchQuery && searchQuery.trim() !== '') {
             query += ` AND chat_rooms.title LIKE ?`;
             queryParams.push(`%${searchQuery}%`);
         }
-
         const [chatRooms, ] = await db.query(query, queryParams);
-
-        for (let room of chatRooms) {
+        const filteredRooms = chatRooms.filter(room => {
             const userList = getRoomUsers(room.room_id);
             room.user_list = userList;
             room.user_count = userList.length;
-        }
-
-        res.json(chatRooms);
+            return room.user_count < room.total_members; // 필터링 조건 추가
+        });
+        res.json(filteredRooms);
     } catch (err) {
         console.error(`searchChatRoom 에러: ${err.message}`); // 에러 로그 한글로 기록
         res.status(500).json({ message: err.message });

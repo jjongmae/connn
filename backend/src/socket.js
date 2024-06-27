@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('./database/db')
 
 let io;
+const roomMaxUsers = {}; // 방의 최대 인원 정보를 저장할 객체
 
 module.exports = (server) => {
     io = socketIo(server, {
@@ -12,11 +13,30 @@ module.exports = (server) => {
     });
 
     io.on('connection', (socket) => {
-        console.log('새로운 사용자가 연결되었습니다.');
+        console.log('새로운 사용자가 연결되었습니다.');                         
 
         // 방에 참여하는 이벤트 리스너
-        socket.on('join', ({ roomId, name, auth }) => {
+        socket.on('join', async ({ roomId, name, auth }) => {
             console.log(`[join] roomId: ${roomId}, name: ${name}, auth: ${auth}`);
+
+            // 방의 최대 인원 확인
+            if (!roomMaxUsers[roomId]) {
+                const [room] = await db.query('SELECT total_members FROM chat_rooms WHERE room_id = ?', [roomId]);
+                if (!room || room.length === 0) {
+                    socket.emit('error', { message: '방을 찾을 수 없습니다.' });
+                    return;
+                }
+                roomMaxUsers[roomId] = room[0].total_members;
+            }
+
+            const maxUsers = roomMaxUsers[roomId];
+            const currentRoom = io.sockets.adapter.rooms.get(roomId);
+            const currentRoomSize = currentRoom ? currentRoom.size : 0;
+
+            if (currentRoomSize >= maxUsers) {
+                socket.emit('roomFull', { message: '방의 최대 인원을 초과했습니다.' });
+                return;
+            }
 
             // 사용자 아이디 할당
             const userId = uuidv4();
