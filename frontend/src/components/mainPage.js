@@ -3,10 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useCallback } from 'react';
 import _ from 'lodash';
 
+const getApiUrl = (path) => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const host = isDevelopment ? process.env.REACT_APP_API_HOST : window.location.hostname;
+  const port = isDevelopment ? process.env.REACT_APP_API_PORT : window.location.port;
+  return `${host}:${port}${path}`;
+};
+
 const fetchCategories = async () => {
-  const host = process.env.REACT_APP_API_HOST;
-  const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/categories/`;
+  const url = getApiUrl('/categories/');
 
   try {
     const response = await fetch(url, {
@@ -23,9 +28,7 @@ const fetchCategories = async () => {
 };
 
 const fetchChatRooms = async () => {
-  const host = process.env.REACT_APP_API_HOST;
-  const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/chatRooms/`;
+  const url = getApiUrl('/chatRooms/');
 
   try {
     const response = await fetch(url, {
@@ -43,9 +46,7 @@ const fetchChatRooms = async () => {
 
 // 카테고리에 따라 채팅 목록을 가져오는 함수
 const fetchSearchChatRooms = async (categoryId, searchQuery) => {
-  const host = process.env.REACT_APP_API_HOST;
-  const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/chatRooms/search`;
+  const url = getApiUrl('/chatRooms/search');
 
   try {
     const response = await fetch(url, {
@@ -63,9 +64,7 @@ const fetchSearchChatRooms = async (categoryId, searchQuery) => {
 };
 
 const fetchCreateChatRoom = async (roomInfo) => {
-  const host = process.env.REACT_APP_API_HOST;
-  const port = process.env.REACT_APP_API_PORT;
-  const url = `${host}:${port}/chatRooms`;
+  const url = getApiUrl('/chatRooms');
 
   try {
     const response = await fetch(url, {

@@ -7,8 +7,6 @@
 var app = require('../src/app');
 var debug = require('debug')('backend:server');
 var http = require('http');
-var https = require('https'); // HTTPS module added
-var fs = require('fs'); // File system module added
 var setupSocket = require('../src/socket');
 
 /**
@@ -19,18 +17,10 @@ var port = normalizePort(process.env.PORT || '3100');
 app.set('port', port);
 
 /**
- * SSL certificate settings
- */
-var sslOptions = {
-  key: fs.readFileSync('./ssl/private.key'), // Path to your private key file
-  cert: fs.readFileSync('./ssl/certificate.crt') // Path to your certificate file
-};
-
-/**
- * Create HTTPS server.
+ * Create HTTP server.
  */
 
-var server = https.createServer(sslOptions, app); // HTTPS server created
+var server = http.createServer(app); // HTTP server created
 
 setupSocket(server);
 
@@ -101,4 +91,3 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-

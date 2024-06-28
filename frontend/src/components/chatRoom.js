@@ -20,8 +20,8 @@ const ChatRoom = () => {
   const [userId, setUserId] = useState('');
 
   useEffect(() => {
-    const host = process.env.REACT_APP_API_HOST;
-    const port = process.env.REACT_APP_API_PORT;
+    const host = process.env.NODE_ENV === 'development' ? process.env.REACT_APP_API_HOST : window.location.hostname;
+    const port = process.env.NODE_ENV === 'development' ? process.env.REACT_APP_API_PORT : window.location.port;
     const serverUrl = `${host}:${port}`;
     const newSocket = io(serverUrl);
     
