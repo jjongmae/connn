@@ -7,8 +7,8 @@ const getApiUrl = (path) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const host = isDevelopment ? process.env.REACT_APP_API_HOST : window.location.hostname;
   const port = isDevelopment ? process.env.REACT_APP_API_PORT : (window.location.port || (window.location.protocol === 'https:' ? '443' : '80'));
-
-  return `http://${host}:${port}${path}`;
+  const protocol = window.location.protocol;
+  return `${protocol}//${host}:${port}${path}`;
 };
 
 const fetchCategories = async () => {

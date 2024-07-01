@@ -19,11 +19,17 @@ const ChatRoom = () => {
   const [userChatStatus, setUserChatStatus] = useState({});
   const [userId, setUserId] = useState('');
 
+  const getUrl = () => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const host = isDevelopment ? process.env.REACT_APP_API_HOST : window.location.hostname;
+    const port = isDevelopment ? process.env.REACT_APP_API_PORT : (window.location.port || (window.location.protocol === 'https:' ? '443' : '80'));
+    const protocol = window.location.protocol;
+    return `${protocol}//${host}:${port}`;
+  };
+
   useEffect(() => {
-    const host = process.env.NODE_ENV === 'development' ? process.env.REACT_APP_API_HOST : window.location.hostname;
-    const port = process.env.NODE_ENV === 'development' ? process.env.REACT_APP_API_PORT : window.location.port;
-    const serverUrl = `${host}:${port}`;
-    const newSocket = io(serverUrl);
+    const url = getUrl();
+    const newSocket = io(url);
     
     setSocket(newSocket);
 
