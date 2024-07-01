@@ -18,7 +18,7 @@ const getApiUrl = (path) => {
 };
 
 const fetchCategories = async () => {
-  const url = getApiUrl('/api/categories/');
+  const url = getApiUrl('/api/categories');
 
   try {
     const response = await fetch(url, {
@@ -35,7 +35,7 @@ const fetchCategories = async () => {
 };
 
 const fetchChatRooms = async () => {
-  const url = getApiUrl('/api/chatRooms/');
+  const url = getApiUrl('/api/chatRooms');
 
   try {
     const response = await fetch(url, {
