@@ -34,8 +34,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(camelCaseMiddleware);
 app.use('/', indexRouter);
-app.use('/categories', categoriesRouter);
-app.use('/chatRooms', chatRoomsRouter);
+app.use('/api/categories', categoriesRouter);
+app.use('/api/chatRooms', chatRoomsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

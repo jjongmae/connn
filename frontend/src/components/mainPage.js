@@ -6,12 +6,19 @@ import _ from 'lodash';
 const getApiUrl = (path) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const host = isDevelopment ? process.env.REACT_APP_API_HOST : window.location.hostname;
-  const port = isDevelopment ? process.env.REACT_APP_API_PORT : window.location.port;
+  const port = isDevelopment ? process.env.REACT_APP_API_PORT : (window.location.port || (window.location.protocol === 'https:' ? '443' : '80'));
+
+  // 디버깅을 위해 콘솔에 로그 출력
+  console.log(`getApiUrl() path: ${path}`);
+  console.log(`isDevelopment: ${isDevelopment}`);
+  console.log(`host: ${host}`);
+  console.log(`port: ${port}`);
+
   return `${host}:${port}${path}`;
 };
 
 const fetchCategories = async () => {
-  const url = getApiUrl('/categories/');
+  const url = getApiUrl('/api/categories/');
 
   try {
     const response = await fetch(url, {
@@ -28,7 +35,7 @@ const fetchCategories = async () => {
 };
 
 const fetchChatRooms = async () => {
-  const url = getApiUrl('/chatRooms/');
+  const url = getApiUrl('/api/chatRooms/');
 
   try {
     const response = await fetch(url, {
@@ -46,7 +53,7 @@ const fetchChatRooms = async () => {
 
 // 카테고리에 따라 채팅 목록을 가져오는 함수
 const fetchSearchChatRooms = async (categoryId, searchQuery) => {
-  const url = getApiUrl('/chatRooms/search');
+  const url = getApiUrl('/api/chatRooms/search');
 
   try {
     const response = await fetch(url, {
@@ -64,7 +71,7 @@ const fetchSearchChatRooms = async (categoryId, searchQuery) => {
 };
 
 const fetchCreateChatRoom = async (roomInfo) => {
-  const url = getApiUrl('/chatRooms');
+  const url = getApiUrl('/api/chatRooms');
 
   try {
     const response = await fetch(url, {
