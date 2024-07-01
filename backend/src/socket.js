@@ -13,7 +13,12 @@ module.exports = (server) => {
     });
 
     io.on('connection', (socket) => {
-        console.log('새로운 사용자가 연결되었습니다.');                         
+        console.log('새로운 사용자가 연결되었습니다.');
+
+        // 연결 종료 이벤트 리스너 (방에 참여하지 않은 상태)
+        socket.on('disconnect', () => {
+            console.log('방에 참여하지 않은 사용자가 연결을 끊었습니다.');
+        });
 
         // 방에 참여하는 이벤트 리스너
         socket.on('join', async ({ roomId, name, auth }) => {
@@ -92,7 +97,7 @@ module.exports = (server) => {
                 }
             });
 
-            // 연결 종료 이벤트 리스너
+            // 연결 종료 이벤트 리스너 (방에 참여한 상태)
             socket.on('disconnect', async () => {
                 const { roomId, userId } = socket;
                 console.log(`[disconnect] roomId:${roomId}, userId: ${userId}`);
